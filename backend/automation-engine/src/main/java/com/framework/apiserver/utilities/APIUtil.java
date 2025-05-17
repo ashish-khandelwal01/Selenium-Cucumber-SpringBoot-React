@@ -3,19 +3,32 @@ package com.framework.apiserver.utilities;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * APIUtil provides utility methods for making HTTP requests using RestAssured.
- * Extends BaseClass to utilize common logging functionality.
+ * This is a Spring-managed bean and should be injected where needed.
  *
- * @see BaseClass
- * @see RestAssured
- * @see Response
- * @see Header
+ * <p>It includes methods for sending GET, POST, and DELETE requests with or without headers and body.</p>
  *
- * @author ashish-khandelwal01
+ * <p>Usage example:</p>
+ * <pre>
+ * {@code
+ * @Autowired
+ * private APIUtil apiUtil;
+ *
+ * Response response = apiUtil.getResponse("https://example.com");
+ * }
+ * </pre>
+ *
+ * <p>Author: ashish-khandelwal01</p>
  */
-public class APIUtil extends BaseClass{
+@Component
+public class APIUtil{
+
+    @Autowired
+    private BaseClass baseClass;
 
     /**
      * Sends a GET request to the specified URL.
@@ -23,7 +36,7 @@ public class APIUtil extends BaseClass{
      * @param url The URL to send the GET request to.
      * @return The response from the GET request.
      */
-    public static Response getResponse(String url){
+    public Response getResponse(String url) {
         RestAssured.baseURI = url;
         return RestAssured.given()
                 .header("Content-Type", "application/json")
@@ -38,7 +51,7 @@ public class APIUtil extends BaseClass{
      * @param body The body of the POST request.
      * @return The response from the POST request.
      */
-    public static Response postResponse(String url, String body){
+    public Response postResponse(String url, String body) {
         RestAssured.baseURI = url;
         return RestAssured.given()
                 .header("Content-Type", "application/json")
@@ -54,7 +67,7 @@ public class APIUtil extends BaseClass{
      * @param header The header to include in the GET request.
      * @return The response from the GET request.
      */
-    public static Response getResponse(String url, Header header){
+    public Response getResponse(String url, Header header) {
         RestAssured.baseURI = url;
         return RestAssured.given()
                 .header("Content-Type", "application/json")
@@ -71,7 +84,7 @@ public class APIUtil extends BaseClass{
      * @param header The header to include in the POST request.
      * @return The response from the POST request.
      */
-    public static Response postResponse(String url, String body, Header header){
+    public Response postResponse(String url, String body, Header header) {
         RestAssured.baseURI = url;
         return RestAssured.given()
                 .header(header)
@@ -86,7 +99,7 @@ public class APIUtil extends BaseClass{
      * @param url The URL to send the DELETE request to.
      * @return The response from the DELETE request.
      */
-    public static Response deleteResponse(String url) {
+    public Response deleteResponse(String url) {
         RestAssured.baseURI = url;
         System.out.println("URL: " + url);
         return RestAssured.given()

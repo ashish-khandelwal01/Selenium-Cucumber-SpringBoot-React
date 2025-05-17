@@ -1,62 +1,135 @@
 package com.framework.apiserver.stepDefinitions;
 
-import io.cucumber.java.en.*;
-import org.openqa.selenium.WebDriver;
 import com.framework.apiserver.pages.BookStorePage;
 import com.framework.apiserver.pages.LoginPage;
 import com.framework.apiserver.utilities.BaseClass;
-import com.framework.apiserver.utilities.SeleniumTestBase;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.framework.apiserver.utilities.DriverManager;
+import com.framework.apiserver.utilities.SelUtil;
 import com.framework.apiserver.service.TestExecutionService;
+import io.cucumber.java.en.*;
+import org.openqa.selenium.WebDriver;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
- * Step definitions for the Book Store Demo application.
- * This class contains the implementation of Cucumber steps for interacting with the Book Store application.
+ * BookStoreDemoStepDefinitions provides step definitions for interacting with the Book Store application.
+ *
+ * <p>This class contains the implementation of Cucumber steps for browser interactions,
+ * navigating to the application, logging in, and verifying UI elements.</p>
+ *
+ * <p>Annotations:</p>
+ * <ul>
+ *   <li>@Autowired: Injects Spring-managed dependencies.</li>
+ *   <li>@Given, @Then, @And: Cucumber annotations for defining step definitions.</li>
+ * </ul>
+ *
+ * <p>Usage:</p>
+ * <ul>
+ *   <li>Define Cucumber scenarios in feature files and map them to these step definitions.</li>
+ *   <li>Use the provided methods to interact with the Book Store application.</li>
+ * </ul>
+ *
+ * @see BookStorePage
+ * @see LoginPage
+ * @see BaseClass
+ * @see DriverManager
+ * @see SelUtil
+ * @see TestExecutionService
  */
-public class BookStoreDemoStepDefinitions extends BaseClass {
+public class BookStoreDemoStepDefinitions {
 
-    @Autowired
-    private TestExecutionService testService;
+    private final DriverManager driverManager;
+    private final BaseClass baseClass;
+    private final TestExecutionService testService;
+    private final SelUtil selUtil;
 
-    SeleniumTestBase seleniumTestBase = new SeleniumTestBase();
-    static WebDriver driver;
-    LoginPage loginPage;
-    BookStorePage bookStorePage;
+    private WebDriver driver;
+    private LoginPage loginPage;
+    private BookStorePage bookStorePage;
 
     /**
-     * Navigates the user to the Book Store application login page using the provided URL.
-     * @param string The URL of the Book Store application.
+     * Constructs a BookStoreDemoStepDefinitions instance with the required dependencies.
+     *
+     * @param driverManager The DriverManager instance for managing WebDriver.
+     * @param baseClass The BaseClass instance for logging and utility methods.
+     * @param testService The TestExecutionService instance for test execution.
+     * @param selUtil The SelUtil instance for Selenium utility methods.
      */
-    @Given("User navigate to the book store application login with url {string}")
-    public void User_navigate_to_the_book_store_application_login_with_url(String string) {
-        driver = seleniumTestBase.browserSetup();
-        loginPage = new LoginPage(driver);
-        bookStorePage = new BookStorePage(driver);
-        loginPage.NavigateToBookStoreApplication(string);
+    @Autowired
+    public BookStoreDemoStepDefinitions(DriverManager driverManager,
+                                        BaseClass baseClass,
+                                        TestExecutionService testService,
+                                        SelUtil selUtil) {
+        this.driverManager = driverManager;
+        this.baseClass = baseClass;
+        this.testService = testService;
+        this.selUtil = selUtil;
     }
 
     /**
-     * Logs the user into the application using the provided username and password.
-     * @param username The username to log in with.
-     * @param password The password to log in with.
+     * Initializes the page objects with the current WebDriver instance.
+     */
+    private void initDriverAndPages() {
+        loginPage = new LoginPage(driver, selUtil);
+        bookStorePage = new BookStorePage(driver, selUtil);
+    }
+
+    /**
+     * Ensures the WebDriver and page objects are initialized if the driver is null.
+     */
+    private void ensureDriverInitialized() {
+        if (driver == null) {
+            driver = driverManager.getDriver();
+            initDriverAndPages();
+        }
+    }
+
+    /**
+     * Creates a new browser instance and initializes the page objects.
+     */
+    @Given("User wants to create a new browser instance")
+    public void userCreatesNewBrowser() {
+        this.driver = driverManager.createNewDriver();
+        initDriverAndPages();
+        baseClass.infoLog("Created new browser instance");
+    }
+
+    /**
+     * Navigates to the Book Store application login page using the provided URL.
+     *
+     * @param url The URL of the Book Store application login page.
+     */
+    @Given("User navigate to the book store application login with url {string}")
+    public void userNavigateToBookStoreApplicationLoginWithUrl(String url) {
+        ensureDriverInitialized();
+        loginPage.navigateToBookStoreApplication(url);
+    }
+
+    /**
+     * Logs in to the application using the provided username and password.
+     *
+     * @param username The username for login.
+     * @param password The password for login.
      */
     @Given("User log in to the application with username {string} and password {string}")
-    public void User_log_in_to_the_application_with_username_and_password(String username, String password) {
-        loginPage.EnterUsername(username);
-        loginPage.EnterPassword(password);
-        loginPage.ClickLoginButton();
+    public void userLogInToTheApplicationWithUsernameAndPassword(String username, String password) {
+        ensureDriverInitialized();
+        loginPage.enterUsername(username);
+        loginPage.enterPassword(password);
+        loginPage.clickLoginButton();
     }
 
     /**
      * Verifies that an error message is displayed on the login page.
      */
     @Then("User should see an error message")
-    public void User_should_see_an_error_message() {
-        String error_message = loginPage.GetErrorMessage();
-        if (error_message.equals("Invalid username or password!")) {
-            passLog("Correct Error message is displayed");
+    public void userShouldSeeAnErrorMessage() {
+        ensureDriverInitialized();
+        String errorMessage = loginPage.getErrorMessage();
+        if ("Invalid username or password!".equals(errorMessage)) {
+            baseClass.passLog("Correct error message is displayed");
         } else {
-            failLog("Error message is not displayed");
+            baseClass.failLog("Error message is not displayed or incorrect");
         }
     }
 
@@ -64,19 +137,21 @@ public class BookStoreDemoStepDefinitions extends BaseClass {
      * Verifies that the search book field is displayed on the Book Store page.
      */
     @Then("User should see a search book field")
-    public void User_should_see_a_search_book_field() {
+    public void userShouldSeeASearchBookField() {
+        ensureDriverInitialized();
         if (bookStorePage.isSearchBoxDisplayed()) {
-            passLog("Search box is displayed");
+            baseClass.passLog("Search box is displayed");
         } else {
-            failLog("Search box is not displayed");
+            baseClass.failLog("Search box is not displayed");
         }
     }
 
     /**
-     * Logs the user out of the application.
+     * Logs out from the Book Store application.
      */
     @Then("User should logout from the application")
-    public void User_should_logout_from_the_application() {
+    public void userShouldLogoutFromTheApplication() {
+        ensureDriverInitialized();
         bookStorePage.clickLogoutButton();
     }
 
@@ -84,12 +159,14 @@ public class BookStoreDemoStepDefinitions extends BaseClass {
      * Verifies that a list of books is displayed on the Book Store page.
      */
     @And("User should see a list of books")
-    public void User_should_see_a_list_of_books() {
-        if (!bookStorePage.getBookTitles().isEmpty()) {
-            passLog("List of books is displayed");
-            infoLog("List of books: " + bookStorePage.getBookTitles());
+    public void userShouldSeeAListOfBooks() {
+        ensureDriverInitialized();
+        var titles = bookStorePage.getBookTitles();
+        if (!titles.isEmpty()) {
+            baseClass.passLog("List of books is displayed");
+            baseClass.infoLog("List of books: " + titles);
         } else {
-            failLog("List of books is not displayed");
+            baseClass.failLog("List of books is not displayed");
         }
     }
 }

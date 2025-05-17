@@ -4,7 +4,8 @@ Feature:  Book Store Demo UI Application
   So that I can perform various actions
 
   Background:
-    Given User navigate to the book store application login with url "https://demoqa.com"
+    Given User wants to create a new browser instance
+    And User navigate to the book store application login with url "https://demoqa.com"
 
   @smoke, @smoke_ui
   Scenario Outline: Login and validate incorrect credentials

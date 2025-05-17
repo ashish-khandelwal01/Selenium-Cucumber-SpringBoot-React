@@ -1,94 +1,80 @@
 package com.framework.apiserver.utilities;
 
 import com.mongodb.ConnectionString;
-import com.mongodb.MongoClient;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import org.bson.Document;
 import org.json.simple.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 
 /**
- * MongoDBUtil is a utility class for interacting with MongoDB.
- * It provides methods to establish connections, retrieve collections, and query documents.
- * Extends BaseClass to utilize logging functionality.
- *
- * @see ConnectionString
- * @see MongoClient
- * @see MongoCollection
- * @see Document
- * @see JSONObject
+ * MongoDBUtil provides utility methods for interacting with MongoDB.
+ * It includes methods for initializing connections, retrieving collections,
+ * and querying documents from MongoDB.
  */
+@Component
+public class MongoDBUtil {
 
-public class MongoDBUtil extends BaseClass {
+    private final BaseClass baseClass;
+    private final JsonUtil jsonUtil;
 
-    /**
-     * JsonUtil instance for JSON-related operations.
-     */
-    public static JsonUtil jsonUtil = new JsonUtil();
-
-    /**
-     * Properties object to load database configuration from a properties file.
-     */
-    public Properties dbProperties = new Properties();
+    private final String mongoUri;
+    private ConnectionString connectionString;
 
     /**
-     * FileInputStream to read the database properties file.
-     */
-    public FileInputStream dbFile;
-
-    /**
-     * ConnectionString object to store the MongoDB connection string.
-     */
-    static ConnectionString connectionString;
-
-    // Static block to load the database properties file.
-    {
-        try {
-            dbFile = new FileInputStream(Constants.sqlFilePath);
-            dbProperties.load(dbFile);
-        } catch (Exception e) {
-            failLog("Unable to load sql.properties file");
-        }
-    }
-
-    // Static block to initialize the MongoDB connection string.
-    {
-        try {
-            connectionString = new ConnectionString(dbProperties.getProperty("mongoUrl"));
-        } catch (Exception e) {
-            failLog("Unable to connect to database");
-        }
-    }
-
-    /**
-     * Creates and returns a MongoClient instance using the connection string.
+     * Constructs a MongoDBUtil instance with the required dependencies.
      *
-     * @return A MongoClient instance.
+     * @param baseClass The BaseClass instance for logging.
+     * @param jsonUtil  The JsonUtil instance for JSON operations.
+     * @param mongoUri  The MongoDB connection URI.
      */
-    public static MongoClient getMongoClient() {
+    @Autowired
+    public MongoDBUtil(BaseClass baseClass, JsonUtil jsonUtil,
+                       @Value("${mongo_uri}") String mongoUri) {
+        this.baseClass = baseClass;
+        this.jsonUtil = jsonUtil;
+        this.mongoUri = mongoUri;
+
+        if (mongoUri == null || mongoUri.isEmpty()) {
+            baseClass.failLog("Mongo URI property 'spring.datasource.mongo_uri' is missing or empty");
+        } else {
+            this.connectionString = new ConnectionString(mongoUri);
+        }
+    }
+
+    /**
+     * Creates and returns a MongoClient instance using the configured connection string.
+     *
+     * @return A MongoClient instance, or null if the connection string is not configured.
+     */
+    public MongoClient getMongoClient() {
+        if (connectionString == null) {
+            baseClass.failLog("Mongo connection string not configured, cannot create client");
+            return null;
+        }
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(connectionString)
                 .build();
-
-        return (MongoClient) MongoClients.create(settings);
+        return MongoClients.create(settings);
     }
 
     /**
-     * Closes the MongoDB client connection.
+     * Closes the given MongoClient instance.
      *
      * @param mongoClient The MongoClient instance to close.
      */
-    public static void disconnectMongoDB(MongoClient mongoClient) {
+    public void disconnectMongoDB(MongoClient mongoClient) {
         if (mongoClient != null) {
             mongoClient.close();
         }
@@ -97,61 +83,76 @@ public class MongoDBUtil extends BaseClass {
     /**
      * Retrieves a MongoCollection from the specified database and collection name.
      *
-     * @param mongoClient The MongoClient instance.
-     * @param dbName The name of the database.
+     * @param mongoClient    The MongoClient instance.
+     * @param dbName         The name of the database.
      * @param collectionName The name of the collection.
-     * @return The MongoCollection instance.
+     * @return The MongoCollection instance, or null if the MongoClient is null.
      */
-    public static MongoCollection<Document> getMongoCollection(MongoClient mongoClient, String dbName, String collectionName) {
+    public MongoCollection<Document> getMongoCollection(MongoClient mongoClient, String dbName, String collectionName) {
+        if (mongoClient == null) {
+            baseClass.failLog("MongoClient is null when retrieving collection");
+            return null;
+        }
         return mongoClient.getDatabase(dbName).getCollection(collectionName);
     }
 
     /**
-     * Retrieves a single document from a MongoCollection based on a key-value pair.
+     * Retrieves the first matching document from the specified collection as a JSONObject.
      *
      * @param collection The MongoCollection to query.
-     * @param key The key to filter the document.
-     * @param value The value to filter the document.
-     * @return The document as a JSONObject, or null if not found.
+     * @param key        The key to match.
+     * @param value      The value to match.
+     * @return The matching document as a JSONObject, or null if no document is found.
      */
-    public static JSONObject getDocumentFromCollection(MongoCollection<Document> collection, String key, String value) {
-        Document document = collection.find(eq(key, value)).first();
-        if (document != null) {
-            String document_string = document.toJson();
-            return jsonUtil.stringToJson(document_string);
+    public JSONObject getDocumentFromCollection(MongoCollection<Document> collection, String key, String value) {
+        if (collection == null) {
+            baseClass.failLog("MongoCollection is null in getDocumentFromCollection");
+            return null;
+        }
+        Document doc = collection.find(eq(key, value)).first();
+        if (doc != null) {
+            return jsonUtil.stringToJson(doc.toJson());
         }
         return null;
     }
 
     /**
-     * Retrieves a list of documents from a MongoCollection based on a key-value pair (integer value).
+     * Retrieves a list of documents matching the specified integer key-value pair from the collection.
      *
      * @param collection The MongoCollection to query.
-     * @param key The key to filter the documents.
-     * @param value The integer value to filter the documents.
-     * @return A list of documents as JSONObjects.
+     * @param key        The key to match.
+     * @param value      The integer value to match.
+     * @return A list of matching documents as JSONObjects.
      */
-    public static List<JSONObject> getDocumentListFromCollection(MongoCollection<Document> collection, String key, int value) {
-        FindIterable<Document> document = collection.find(eq(key, value));
+    public List<JSONObject> getDocumentListFromCollection(MongoCollection<Document> collection, String key, int value) {
         List<JSONObject> jsonObjects = new ArrayList<>();
-        for (Document doc : document) {
+        if (collection == null) {
+            baseClass.failLog("MongoCollection is null in getDocumentListFromCollection");
+            return jsonObjects;
+        }
+        FindIterable<Document> documents = collection.find(eq(key, value));
+        for (Document doc : documents) {
             jsonObjects.add(jsonUtil.stringToJson(doc.toJson()));
         }
         return jsonObjects;
     }
 
     /**
-     * Retrieves a list of documents from a MongoCollection based on a key-value pair (string value).
+     * Retrieves a list of documents matching the specified string key-value pair from the collection.
      *
      * @param collection The MongoCollection to query.
-     * @param key The key to filter the documents.
-     * @param value The string value to filter the documents.
-     * @return A list of documents as JSONObjects.
+     * @param key        The key to match.
+     * @param value      The string value to match.
+     * @return A list of matching documents as JSONObjects.
      */
-    public static List<JSONObject> getDocumentListFromCollection(MongoCollection<Document> collection, String key, String value) {
-        FindIterable<Document> document = collection.find(and(eq(key, value)));
+    public List<JSONObject> getDocumentListFromCollection(MongoCollection<Document> collection, String key, String value) {
         List<JSONObject> jsonObjects = new ArrayList<>();
-        for (Document doc : document) {
+        if (collection == null) {
+            baseClass.failLog("MongoCollection is null in getDocumentListFromCollection");
+            return jsonObjects;
+        }
+        FindIterable<Document> documents = collection.find(and(eq(key, value)));
+        for (Document doc : documents) {
             jsonObjects.add(jsonUtil.stringToJson(doc.toJson()));
         }
         return jsonObjects;

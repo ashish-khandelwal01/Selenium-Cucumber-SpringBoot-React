@@ -1,6 +1,10 @@
 package com.framework.apiserver.utilities;
 
+import com.framework.apiserver.config.SftpProperties;
 import com.jcraft.jsch.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -9,32 +13,51 @@ import java.util.Properties;
 /**
  * SFTPUtil is a utility class for handling SFTP operations.
  * It provides methods to connect, upload, download, and disconnect from an SFTP server.
+ *
+ * <p>Dependencies:</p>
+ * <ul>
+ *   <li>SftpProperties for SFTP configuration</li>
+ *   <li>JSch library for SFTP operations</li>
+ *   <li>Spring Framework for dependency injection</li>
+ * </ul>
+ *
+ * @see SftpProperties
+ * @see JSch
+ * @see ChannelSftp
+ * @see Component
  */
-public class SFTPUtil extends BaseClass {
+@Component
+public class SFTPUtil {
 
+    private final SftpProperties props;
     private Session session;
     private ChannelSftp channelSftp;
 
     /**
-     * Connects to the SFTP server using the provided credentials.
+     * Constructs an SFTPUtil instance with the required SftpProperties dependency.
      *
-     * @param host The SFTP server host.
-     * @param port The SFTP server port.
-     * @param username The username for authentication.
-     * @param password The password for authentication.
-     * @throws Exception If an error occurs during connection.
+     * @param props The SftpProperties instance containing SFTP configuration details.
      */
+    @Autowired
+    public SFTPUtil(SftpProperties props) {
+        this.props = props;
+    }
 
-    public void connect(String host, int port, String username, String password) throws Exception {
+    /**
+     * Establishes a connection to the SFTP server using the provided configuration.
+     *
+     * @throws Exception If an error occurs during the connection process.
+     */
+    public void connect() throws Exception {
         JSch jsch = new JSch();
-        session = jsch.getSession(username, host, port);
-        session.setPassword(password);
+        session = jsch.getSession(props.getUsername(), props.getHost(), props.getPort());
+        session.setPassword(props.getPassword());
 
         Properties config = new Properties();
         config.put("StrictHostKeyChecking", "no");
         session.setConfig(config);
-
         session.connect();
+
         channelSftp = (ChannelSftp) session.openChannel("sftp");
         channelSftp.connect();
     }
@@ -42,7 +65,7 @@ public class SFTPUtil extends BaseClass {
     /**
      * Uploads a file to the SFTP server.
      *
-     * @param localFilePath The path to the local file.
+     * @param localFilePath  The path to the local file.
      * @param remoteFilePath The path on the SFTP server where the file will be uploaded.
      * @throws Exception If an error occurs during file upload.
      */
@@ -56,7 +79,7 @@ public class SFTPUtil extends BaseClass {
      * Downloads a file from the SFTP server.
      *
      * @param remoteFilePath The path to the file on the SFTP server.
-     * @param localFilePath The path where the file will be downloaded locally.
+     * @param localFilePath  The path where the file will be downloaded locally.
      * @throws Exception If an error occurs during file download.
      */
     public void downloadFile(String remoteFilePath, String localFilePath) throws Exception {
@@ -67,6 +90,7 @@ public class SFTPUtil extends BaseClass {
 
     /**
      * Disconnects from the SFTP server.
+     * Ensures that both the SFTP channel and the session are properly closed.
      */
     public void disconnect() {
         if (channelSftp != null && channelSftp.isConnected()) {

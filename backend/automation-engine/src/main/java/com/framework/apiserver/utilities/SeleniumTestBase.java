@@ -1,6 +1,10 @@
 package com.framework.apiserver.utilities;
 
+import com.framework.apiserver.config.FrameworkProperties;
+import com.framework.apiserver.config.MySqlDbProperties;
 import io.cucumber.java.Scenario;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.openqa.selenium.OutputType;
@@ -8,87 +12,82 @@ import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.edge.EdgeOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Properties;
 
 /**
- * SeleniumTestBase is a utility class for setting up and managing Selenium WebDriver instances.
- * It provides methods for browser setup, capturing screenshots, and closing the browser.
- * Extends BaseClass to utilize logging functionality.
+ * SeleniumTestBase provides utility methods for setting up browsers, capturing screenshots,
+ * and managing WebDriver instances for Selenium-based tests.
+ *
+ * <p>Dependencies:</p>
+ * <ul>
+ *   <li>Spring Framework for dependency injection</li>
+ *   <li>Selenium WebDriver for browser automation</li>
+ *   <li>Apache Commons IO for file operations</li>
+ * </ul>
  *
  * @see WebDriver
  * @see ChromeDriver
  * @see EdgeDriver
- * @see ChromeOptions
- * @see EdgeOptions
+ * @see TakesScreenshot
  * @see FileUtils
- * @see Properties
+ * @see Component
  */
-public class SeleniumTestBase extends BaseClass {
+@Component
+public class SeleniumTestBase {
+
+    private final FrameworkProperties properties;
+
+    @Autowired
+    private BaseClass baseClass;
+
+    @Setter
+    @Getter
+    protected WebDriver driver;
+
+    @Value("${browser}")
+    private String browser;
+
+    @Value("${browser_mode}")
+    private String browserMode;
+
+    private final HashMap<String, Object> browserPref = new HashMap<>();
 
     /**
-     * Properties object to load configuration from a properties file.
+     * Constructs a SeleniumTestBase instance and initializes browser preferences.
      */
-    public Properties configProperties = new Properties();
-
-    /**
-     * FileInputStream to read the configuration properties file.
-     */
-    public FileInputStream configFile;
-
-    /**
-     * Static block to load the configuration properties file.
-     */
-    {
-        try {
-            configFile = new FileInputStream(Constants.configFilePath);
-            configProperties.load(configFile);
-        } catch (Exception e) {
-            failLog("Unable to load sql.properties file");
-        }
+    public SeleniumTestBase(FrameworkProperties properties) {
+        this.properties = properties;
+        browserPref.put("download.default_directory", properties.getDownloadPath());
+        browserPref.put("profile.default_content_setting_value.notifications", 2);
+        browserPref.put("credentials_enable_service", false);
+        browserPref.put("profile.password_manager_enabled", false);
+        browserPref.put("credential_enable_service", false);
     }
-
-    /**
-     * WebDriver instance for browser automation.
-     */
-    public static WebDriver driver;
-
-    /**
-     * ChromeOptions instance to configure Chrome browser settings.
-     */
-    ChromeOptions chromeOptions = new ChromeOptions();
-
-    /**
-     * EdgeOptions instance to configure Edge browser settings.
-     */
-    EdgeOptions edgeOptions = new EdgeOptions();
-
-    /**
-     * HashMap to store browser preferences.
-     */
-    HashMap<String, Object> browser_pref = new HashMap<>();
 
     /**
      * Sets up the browser based on the configuration properties.
      *
-     * @return The WebDriver instance for the configured browser.
+     * <p>Supported browsers:</p>
+     * <ul>
+     *   <li>Chrome</li>
+     *   <li>Edge</li>
+     * </ul>
+     *
+     * @return The WebDriver instance.
+     * @throws IllegalArgumentException if the browser is not supported.
      */
     public WebDriver browserSetup() {
-        String browser = configProperties.getProperty("browser");
-        String browser_mode = configProperties.getProperty("browser_mode");
-        browser_pref.put("download.default_directory", Constants.downloadPath);
-        browser_pref.put("profile.default_content_setting_value.notifications", 2);
-        browser_pref.put("credentials_enable_service", false);
-        browser_pref.put("profile.password_manager_enabled", false);
-        browser_pref.put("credential_enable_service", false);
-        switch (browser) {
+        switch (browser.toLowerCase()) {
             case "chrome":
+                ChromeOptions chromeOptions = new ChromeOptions();
                 chromeOptions.addArguments("user-data-dir=C:/temp/freshprofile");
                 chromeOptions.addArguments("--disable-features=PasswordCheck,AutofillKeyedData,SafeBrowsingEnhancedProtection");
                 chromeOptions.addArguments("--disable-sync");
@@ -96,28 +95,45 @@ public class SeleniumTestBase extends BaseClass {
                 chromeOptions.addArguments("--disable-infobars");
                 chromeOptions.addArguments("--disable-extensions");
                 chromeOptions.addArguments("--disable-popup-blocking");
-                chromeOptions.setExperimentalOption("prefs", browser_pref);
-                if (browser_mode.equalsIgnoreCase("headless")) {
-                    chromeOptions.addArguments("--headless");
+                chromeOptions.setExperimentalOption("prefs", browserPref);
+
+                if ("headless".equalsIgnoreCase(browserMode)) {
+                    chromeOptions.addArguments("--headless=new"); // Modern headless mode
+                    chromeOptions.addArguments("--no-sandbox");
+                    chromeOptions.addArguments("--disable-dev-shm-usage");
+                    chromeOptions.addArguments("--disable-gpu");
+                    chromeOptions.addArguments("--window-size=1920,1080");
                 }
+
                 driver = new ChromeDriver(chromeOptions);
                 break;
+
             case "edge":
+                EdgeOptions edgeOptions = new EdgeOptions();
                 edgeOptions.addArguments("--start-maximized");
                 edgeOptions.addArguments("--disable-infobars");
                 edgeOptions.addArguments("--disable-extensions");
                 edgeOptions.addArguments("--disable-popup-blocking");
-                edgeOptions.setExperimentalOption("prefs", browser_pref);
-                if (browser_mode.equalsIgnoreCase("headless")) {
-                    edgeOptions.addArguments("--headless");
+                edgeOptions.setExperimentalOption("prefs", browserPref);
+
+                if ("headless".equalsIgnoreCase(browserMode)) {
+                    edgeOptions.addArguments("--headless=new");
+                    edgeOptions.addArguments("--no-sandbox");
+                    edgeOptions.addArguments("--disable-dev-shm-usage");
+                    edgeOptions.addArguments("--window-size=1920,1080");
                 }
+
                 driver = new EdgeDriver(edgeOptions);
                 break;
+
             default:
-                failLog("Browser not supported: " + browser);
+                baseClass.failLog("Browser not supported: " + browser);
+                throw new IllegalArgumentException("Unsupported browser: " + browser);
         }
+
         return driver;
     }
+
 
     /**
      * Captures a screenshot and attaches it to the Cucumber scenario.
@@ -126,10 +142,10 @@ public class SeleniumTestBase extends BaseClass {
      */
     public void captureScreenshot(Scenario scenario) {
         if (driver != null) {
-            final byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+            byte[] screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
             scenario.attach(screenshot, "image/png", scenario.getName());
         } else {
-            failLog("Driver is null, unable to capture screenshot");
+            baseClass.failLog("Driver is null, unable to capture screenshot");
         }
     }
 
@@ -140,7 +156,7 @@ public class SeleniumTestBase extends BaseClass {
         if (driver != null) {
             driver.quit();
         } else {
-            failLog("Driver is null, unable to close browser");
+            baseClass.failLog("Driver is null, unable to close browser");
         }
     }
 
@@ -149,17 +165,19 @@ public class SeleniumTestBase extends BaseClass {
      *
      * @param screenshotName The name of the screenshot file.
      * @return The full path of the saved screenshot file.
-     * @throws IOException If an error occurs while saving the screenshot.
+     * @throws IOException if saving the screenshot fails.
      */
     public String captureScreenshot(String screenshotName) throws IOException {
         if (driver != null) {
             File screenshot = ((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);
-            screenshotName = Constants.screenshotPath + FilenameUtils.getBaseName(screenshotName) + "_" + System.currentTimeMillis() + ".png";
-            FileUtils.copyFile(screenshot, new File(screenshotName));
-            return screenshotName;
+            String filePath = properties.getScreenshotPath()
+                    + FilenameUtils.getBaseName(screenshotName)
+                    + "_" + System.currentTimeMillis() + ".png";
+            FileUtils.copyFile(screenshot, new File(filePath));
+            return filePath;
         } else {
-            failLog("Driver is null, unable to capture screenshot");
+            baseClass.failLog("Driver is null, unable to capture screenshot");
+            return null;
         }
-        return null;
     }
 }

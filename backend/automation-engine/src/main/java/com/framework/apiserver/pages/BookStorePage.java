@@ -1,58 +1,81 @@
 package com.framework.apiserver.pages;
 
+import com.framework.apiserver.utilities.SelUtil;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.PageFactory;
-import com.framework.apiserver.utilities.SelUtil;
-import com.framework.apiserver.utilities.SeleniumTestBase;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The BookStorePage class represents the Book Store page of the application.
- * It provides methods to interact with the page elements such as searching for books,
- * retrieving book titles, and logging out of the application.
- * This class uses the Page Object Model (POM) design pattern.
+ * BookStorePage represents the page object model for the Book Store page.
+ *
+ * <p>It provides methods to interact with the elements on the page, such as
+ * searching for books, retrieving book titles, and logging out.</p>
+ *
+ * <p>Annotations:</p>
+ * <ul>
+ *   <li>@FindBy: Used to locate web elements on the page.</li>
+ * </ul>
+ *
+ * <p>Usage:</p>
+ * <ul>
+ *   <li>Instantiate this class by passing a WebDriver and SelUtil instance.</li>
+ *   <li>Use the provided methods to interact with the Book Store page.</li>
+ * </ul>
+ *
+ * @see SelUtil
  */
-public class BookStorePage extends SeleniumTestBase {
-	WebDriver driver;
+public class BookStorePage {
+
+	private final WebDriver driver;
+	private final SelUtil selUtil;
 
 	/**
-	 * Constructor to initialize the BookStorePage with a WebDriver instance.
-	 * @param driver The WebDriver instance used to interact with the web page.
+	 * WebElement representing the search box on the Book Store page.
 	 */
-	public BookStorePage(WebDriver driver) {
+	@FindBy(id = "searchBox")
+	private WebElement searchBox;
+
+	/**
+	 * List of WebElements representing the book titles displayed on the page.
+	 */
+	@FindBy(xpath = "//div[@class='action-buttons']/span/a")
+	private List<WebElement> bookTitles;
+
+	/**
+	 * WebElement representing the logout button on the Book Store page.
+	 */
+	@FindBy(xpath = "//button[@id='submit']")
+	private WebElement logoutButton;
+
+	/**
+	 * Constructs a BookStorePage instance and initializes its elements.
+	 *
+	 * @param driver  The WebDriver instance used to interact with the browser.
+	 * @param selUtil The SelUtil instance providing utility methods for Selenium.
+	 */
+	public BookStorePage(WebDriver driver, SelUtil selUtil) {
 		this.driver = driver;
+		this.selUtil = selUtil;
 		PageFactory.initElements(driver, this);
 	}
 
-	// Web elements on the Book Store page
-
-	/** The search box element used to search for books. */
-	@FindBy(id = "searchBox")
-	public WebElement searchBox;
-
-	/** A list of book title elements displayed on the page. */
-	@FindBy(xpath = "//div[@class='action-buttons']/span/a")
-	public List<WebElement> bookTitles;
-
-	/** The logout button element. */
-	@FindBy(xpath = "//button[@id='submit']")
-	public WebElement logoutButton;
-
 	/**
 	 * Checks if the search box is displayed on the page.
+	 *
 	 * @return true if the search box is displayed, false otherwise.
 	 */
 	public boolean isSearchBoxDisplayed() {
-		return SelUtil.isDisplayed(searchBox);
+		return selUtil.isDisplayed(searchBox);
 	}
 
 	/**
-	 * Retrieves the titles of all books displayed on the page.
-	 * @return A list of book titles as Strings.
+	 * Retrieves the titles of the books displayed on the page.
+	 *
+	 * @return A list of book titles as strings.
 	 */
 	public List<String> getBookTitles() {
 		List<String> titles = new ArrayList<>();
@@ -63,9 +86,9 @@ public class BookStorePage extends SeleniumTestBase {
 	}
 
 	/**
-	 * Clicks the logout button to log out of the application.
+	 * Clicks the logout button to log out of the Book Store page.
 	 */
 	public void clickLogoutButton() {
-		SelUtil.clickElement(logoutButton);
+		selUtil.clickElement(logoutButton);
 	}
 }

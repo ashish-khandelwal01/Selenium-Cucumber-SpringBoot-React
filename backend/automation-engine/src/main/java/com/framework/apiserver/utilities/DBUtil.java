@@ -1,159 +1,115 @@
 package com.framework.apiserver.utilities;
 
-import java.io.FileInputStream;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Component;
+
+import javax.sql.DataSource;
+import java.sql.Clob;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
-import java.sql.*;
 
 /**
- * DBUtil is a utility class for interacting with a database.
- * It provides methods to execute SQL queries and retrieve results in various formats.
- * Extends BaseClass to utilize logging functionality.
+ * DBUtil provides database interaction methods using Spring JdbcTemplate.
+ * It supports fetching results as lists of strings, CLOBs, or single column values.
  *
- * @see BaseClass
- * @see Properties
- * @see Connection
- * @see ResultSet
- * @see Statement
- * @see DriverManager
+ * <p>Dependencies:</p>
+ * <ul>
+ *   <li>Spring JdbcTemplate for database operations</li>
+ *   <li>BaseClass for logging errors</li>
+ * </ul>
+ *
+ * @see JdbcTemplate
+ * @see RowMapper
+ * @see Clob
  * @see SQLException
+ * @see BaseClass
+ *
+ * @author ashish-khandelwal01
  */
-public class DBUtil extends BaseClass {
+@Component
+public class DBUtil {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final BaseClass baseClass;
 
     /**
-     * Properties object to load SQL configuration from a properties file.
+     * Constructs a DBUtil instance with the required dependencies.
+     *
+     * @param jdbcTemplate The Spring JdbcTemplate for database operations.
+     * @param baseClass The BaseClass for logging errors.
      */
-    public Properties sqlProperties = new Properties();
-
-    /**
-     * FileInputStream to read the SQL properties file.
-     */
-    public FileInputStream sqlFile;
-
-    // Static block to load the SQL properties file.
-    {
-        try {
-            sqlFile = new FileInputStream(Constants.sqlFilePath);
-            sqlProperties.load(sqlFile);
-        } catch (Exception e) {
-            failLog("Unable to load sql.properties file");
-        }
+    @Autowired
+    public DBUtil(@Qualifier("mysqlJdbcTemplate") JdbcTemplate jdbcTemplate, BaseClass baseClass) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.baseClass = baseClass;
     }
 
     /**
-     * Connection object to establish a connection to the database.
-     */
-    Connection connection;
-
-    /**
-     * ResultSet object to store the results of executed queries.
-     */
-    ResultSet resultSet;
-
-    // Static block to establish a database connection.
-    {
-        try {
-            connection = DriverManager.getConnection(
-                    sqlProperties.getProperty("url"),
-                    sqlProperties.getProperty("user"),
-                    sqlProperties.getProperty("password")
-            );
-        } catch (Exception e) {
-            failLog("Unable to connect to database");
-        }
-    }
-
-    /**
-     * Executes a SQL query and retrieves the results as a list of rows,
+     * Executes a SQL query and returns the result as a list of rows,
      * where each row is a list of strings.
      *
      * @param query The SQL query to execute.
      * @return A list of rows, where each row is a list of strings.
      */
     public List<List<String>> executeQuery(String query) {
-        List<List<String>> tableData = new ArrayList<>();
         try {
-            Statement statement = connection.createStatement();
-            resultSet = statement.executeQuery(query);
-            while (resultSet.next()) {
-                ArrayList<String> tableRow = new ArrayList<>();
-                for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                    tableRow.add(resultSet.getString(i));
+            return jdbcTemplate.query(query, (ResultSet rs) -> {
+                List<List<String>> result = new ArrayList<>();
+                int columnCount = rs.getMetaData().getColumnCount();
+                while (rs.next()) {
+                    List<String> row = new ArrayList<>();
+                    for (int i = 1; i <= columnCount; i++) {
+                        row.add(rs.getString(i));
+                    }
+                    result.add(row);
                 }
-                tableData.add(tableRow);
-            }
-            resultSet.close();
-            statement.close();
-        } catch (SQLException e) {
-            failLog("Unable to execute query: " + query);
-        } finally {
-            closeConnection();
+                return result;
+            });
+        } catch (Exception e) {
+            baseClass.failLog("Unable to execute query: " + query);
+            return new ArrayList<>();
         }
-        return tableData;
     }
 
     /**
-     * Executes a SQL query and retrieves a single string value from the specified column.
+     * Executes a SQL query and returns the value of a specified column as a string.
      *
      * @param query The SQL query to execute.
-     * @param columnName The name of the column to retrieve the value from.
-     * @return The string value from the specified column, or null if no result is found.
+     * @param columnName The name of the column to retrieve.
+     * @return The value of the specified column as a string, or null if an error occurs.
      */
     public String executeQueryAndReturnString(String query, String columnName) {
-        String result = null;
         try {
-            Statement statement = connection.createStatement();
-            resultSet = statement.executeQuery(query);
-            if (resultSet.next()) {
-                result = resultSet.getString(columnName);
-            }
-            resultSet.close();
-            statement.close();
-        } catch (SQLException e) {
-            failLog("Unable to execute query: " + query);
-        } finally {
-            closeConnection();
+            return jdbcTemplate.queryForObject(query, (rs, rowNum) -> rs.getString(columnName));
+        } catch (Exception e) {
+            baseClass.failLog("Unable to execute query: " + query);
+            return null;
         }
-        return result;
     }
 
     /**
-     * Executes a SQL query and retrieves a list of CLOB (Character Large Object) values
-     * from the specified column.
+     * Executes a SQL query and returns the value of a specified column as a list of CLOBs.
      *
      * @param query The SQL query to execute.
-     * @param columnName The name of the column to retrieve the CLOB values from.
-     * @return A list of CLOB values from the specified column.
+     * @param columnName The name of the column to retrieve.
+     * @return A list of CLOBs representing the values of the specified column.
      */
     public List<Clob> executeQueryAndReturnClob(String query, String columnName) {
-        List<Clob> clobList = new ArrayList<>();
         try {
-            Statement statement = connection.createStatement();
-            resultSet = statement.executeQuery(query);
-            while (resultSet.next()) {
-                clobList.add(resultSet.getClob(columnName));
-            }
-            resultSet.close();
-            statement.close();
-        } catch (SQLException e) {
-            failLog("Unable to execute query: " + query);
-        } finally {
-            closeConnection();
-        }
-        return clobList;
-    }
-
-    /**
-     * Closes the database connection if it is open.
-     */
-    public void closeConnection() {
-        try {
-            if (connection != null) {
-                connection.close();
-            }
-        } catch (SQLException e) {
-            failLog("Unable to close database connection");
+            return jdbcTemplate.query(query, new RowMapper<Clob>() {
+                @Override
+                public Clob mapRow(ResultSet rs, int rowNum) throws SQLException {
+                    return rs.getClob(columnName);
+                }
+            });
+        } catch (Exception e) {
+            baseClass.failLog("Unable to execute query: " + query);
+            return new ArrayList<>();
         }
     }
 }

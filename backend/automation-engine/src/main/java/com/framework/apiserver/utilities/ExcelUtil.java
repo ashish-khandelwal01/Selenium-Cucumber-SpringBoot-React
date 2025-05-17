@@ -1,130 +1,91 @@
 package com.framework.apiserver.utilities;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 
 /**
- * ExcelUtil is a utility class for reading data from Excel files.
- * It provides methods to retrieve specific cell data and test case-related data from Excel sheets.
+ * ExcelUtil is a Spring-managed bean for reading Excel files.
+ * It provides methods to read specific cell data or entire rows as key-value pairs.
  * Extends BaseClass to utilize logging functionality.
- *
+ * <p>
  * @see FileInputStream
  * @see XSSFWorkbook
- * @see XSSFSheet
- * @see XSSFRow
- * @see XSSFCell
  * @see DataFormatter
  * @see HashMap
  * @see Iterator
+ * <p>
+ * <p>Author: ashish-khandelwal01</p>
  */
-public class ExcelUtil extends BaseClass {
+@Component
+public class ExcelUtil {
+
+    @Autowired
+    private BaseClass baseClass;
 
     /**
-     * FileInputStream object to read the Excel file.
-     */
-    public static FileInputStream fileInputStream;
-
-    /**
-     * XSSFWorkbook object to represent the entire Excel workbook.
-     */
-    public static XSSFWorkbook workbook;
-
-    /**
-     * XSSFSheet object to represent a specific sheet in the workbook.
-     */
-    public static XSSFSheet sheet;
-
-    /**
-     * XSSFRow object to represent a specific row in the sheet.
-     */
-    public static XSSFRow row;
-
-    /**
-     * XSSFCell object to represent a specific cell in the row.
-     */
-    public static XSSFCell cell;
-
-    /**
-     * Retrieves the data from a specific cell in an Excel sheet.
+     * Reads the content of a specific cell from an Excel file.
      *
-     * @param xlFile The path to the Excel file.
-     * @param sheetName The name of the sheet to read from.
-     * @param rowNum The row number of the cell (0-based index).
-     * @param colNum The column number of the cell (0-based index).
-     * @return The data from the specified cell as a String.
+     * @param xlFile     Path to the Excel file.
+     * @param sheetName  Name of the sheet.
+     * @param rowNum     Zero-based row index.
+     * @param colNum     Zero-based column index.
+     * @return Cell value as String.
      */
-    public static String getCellData(String xlFile, String sheetName, int rowNum, int colNum) {
-        String cellData = "";
-        try {
-            fileInputStream = new FileInputStream(xlFile);
-            workbook = new XSSFWorkbook(fileInputStream);
-            sheet = workbook.getSheet(sheetName);
+    public String getCellData(String xlFile, String sheetName, int rowNum, int colNum) {
+        try (FileInputStream fis = new FileInputStream(xlFile);
+             Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheet(sheetName);
+            Row row = sheet.getRow(rowNum);
+            Cell cell = row.getCell(colNum);
+            return new DataFormatter().formatCellValue(cell);
         } catch (Exception e) {
-            System.out.println("Error opening Excel file: " + e.getMessage());
+            baseClass.failLog("Error reading cell data: " + e.getMessage());
+            return "";
         }
-        try {
-            row = sheet.getRow(rowNum);
-            cell = row.getCell(colNum);
-            cellData = new DataFormatter().formatCellValue(cell);
-        } catch (Exception e) {
-            System.out.println("Error reading cell data: " + e.getMessage());
-        }
-        return cellData;
     }
 
     /**
-     * Retrieves test case-related data from an Excel sheet as a key-value pair.
+     * Retrieves data from a row identified by a test case name as a map.
      *
-     * @param xlPath The path to the Excel file.
-     * @param sheetName The name of the sheet to read from.
-     * @param testCaseName The name of the test case to retrieve data for.
-     * @return A HashMap containing the test case data as key-value pairs.
+     * @param xlFile        Path to the Excel file.
+     * @param sheetName     Name of the sheet.
+     * @param testCaseName  Name in the first column to match.
+     * @return Key-value pairs of test data.
      */
-    public static HashMap<String, String> getData(String xlPath, String sheetName, String testCaseName) {
+    public HashMap<String, String> getData(String xlFile, String sheetName, String testCaseName) {
         HashMap<String, String> data = new HashMap<>();
-        try {
-            fileInputStream = new FileInputStream(xlPath);
-            workbook = new XSSFWorkbook(fileInputStream);
-            sheet = workbook.getSheet(sheetName);
+        try (FileInputStream fis = new FileInputStream(xlFile);
+             Workbook workbook = new XSSFWorkbook(fis)) {
+            Sheet sheet = workbook.getSheet(sheetName);
             Iterator<Row> rowIterator = sheet.iterator();
-            Row firstRow = rowIterator.next();
+            Row headerRow = rowIterator.next();
+
             while (rowIterator.hasNext()) {
                 Row row = rowIterator.next();
                 if (row.getCell(0).getStringCellValue().equalsIgnoreCase(testCaseName)) {
-                    int i = 0;
-                    for (int row_num = 1; row_num < row.getLastCellNum(); row_num++) {
-                        Cell cell = row.getCell(row_num, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                    for (int i = 1; i < row.getLastCellNum(); i++) {
+                        Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                        String key = headerRow.getCell(i).getStringCellValue();
                         if (cell == null) {
-                            data.put(firstRow.getCell(i).getStringCellValue(), "");
-                        } else if (cell.getCellType().equals(CellType.NUMERIC)) {
-                            data.put(firstRow.getCell(i).getStringCellValue(), String.valueOf(cell.getNumericCellValue()));
+                            data.put(key, "");
+                        } else if (cell.getCellType() == CellType.NUMERIC) {
+                            data.put(key, String.valueOf(cell.getNumericCellValue()));
                         } else {
-                            data.put(firstRow.getCell(i).getStringCellValue(), cell.getStringCellValue());
+                            data.put(key, cell.getStringCellValue());
                         }
-                        i++;
                     }
                     break;
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error reading Excel data: " + e.getMessage());
-        } finally {
-            try {
-                workbook.close();
-                fileInputStream.close();
-            } catch (Exception e) {
-                System.out.println("Error closing Excel file: " + e.getMessage());
-            }
+            baseClass.failLog("Error reading Excel data: " + e.getMessage());
         }
         return data;
     }

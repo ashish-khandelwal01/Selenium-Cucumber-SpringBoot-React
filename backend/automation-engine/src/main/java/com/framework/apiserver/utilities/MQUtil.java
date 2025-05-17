@@ -1,86 +1,116 @@
 package com.framework.apiserver.utilities;
 
 import com.ibm.mq.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-import java.io.FileInputStream;
-import java.util.Properties;
+import javax.annotation.PostConstruct;
 
 /**
  * Utility class for interacting with IBM MQ.
- * <p>
- * This class provides methods to write messages into an MQ queue.
- * <p>
- * It uses configuration properties to establish a connection to the MQ server.
+ * Provides methods to configure and send messages to an MQ queue.
+ *
+ * <p>Dependencies:</p>
+ * <ul>
+ *   <li>Spring Framework for dependency injection and configuration</li>
+ *   <li>IBM MQ classes for Java for MQ operations</li>
+ * </ul>
+ *
+ * <p>Configuration:</p>
+ * <ul>
+ *   <li>mqhost: Hostname of the MQ server</li>
+ *   <li>mqchannel: Channel name for MQ communication</li>
+ *   <li>mqport: Port number of the MQ server</li>
+ *   <li>mquser: Username for MQ authentication</li>
+ *   <li>mqpassword: Password for MQ authentication</li>
+ *   <li>mqqueueManager: Name of the MQ Queue Manager</li>
+ *   <li>mqname: Name of the MQ queue</li>
+ * </ul>
+ *
+ * @see MQEnvironment
+ * @see MQQueueManager
+ * @see MQQueue
+ * @see MQMessage
+ * @see MQPutMessageOptions
  */
-public class MQUtil extends BaseClass {
+@Component
+public class MQUtil {
 
-    // IBM MQ Queue Manager instance
-    static MQQueueManager queueManager;
+    @Autowired
+    private BaseClass baseClass;
 
-    // Options for putting messages into the queue
-    static MQPutMessageOptions putMessageOptions;
+    @Value("${mqhost}")
+    private String mqHost;
 
-    // IBM MQ Queue instance
-    static MQQueue queue;
+    @Value("${mqchannel}")
+    private String mqChannel;
 
-    // IBM MQ Message instance
-    static MQMessage mqMessage;
+    @Value("${mqport}")
+    private int mqPort;
 
-    // Options for opening the queue
-    static int openOptions;
+    @Value("${mquser}")
+    private String mqUser;
+
+    @Value("${mqpassword}")
+    private String mqPassword;
+
+    @Value("${mqqueueManager}")
+    private String mqQueueManager;
+
+    @Value("${mqname}")
+    private String mqQueueName;
+
+    private MQPutMessageOptions putMessageOptions;
+    private int openOptions;
 
     /**
-     * Properties object to load MQ configuration from a properties file.
+     * Initializes MQ options after the bean is constructed.
+     * Configures the message options and open options for MQ operations.
      */
-    public static Properties configProperties = new Properties();
-
-    /**
-     * FileInputStream to read the MQ properties file.
-     */
-    public FileInputStream configFile;
-
-    /*
-     * Instance initializer block to load the MQ properties file.
-     * This block is executed when an instance of the class is created.
-     */
-    {
-        try {
-            // Load the properties file using the configured file path
-            configFile = new FileInputStream(Constants.configFilePath);
-            configProperties.load(configFile);
-        } catch (Exception e) {
-            // Log failure if the properties file cannot be loaded
-            failLog("Unable to load sql.properties file");
-        }
+    @PostConstruct
+    public void init() {
+        putMessageOptions = new MQPutMessageOptions();
+        putMessageOptions.options = MQC.MQPMO_DEFAULT_CONTEXT;
+        openOptions = MQC.MQOO_OUTPUT;
     }
 
     /**
-     * Writes a message into the configured MQ queue.
+     * Sends a message to the configured MQ queue.
      *
-     * @param message The message to be written into the MQ queue.
+     * <p>Steps:</p>
+     * <ol>
+     *   <li>Set MQ environment properties</li>
+     *   <li>Connect to the MQ Queue Manager</li>
+     *   <li>Access the specified queue</li>
+     *   <li>Create and configure the MQ message</li>
+     *   <li>Write the message to the queue</li>
+     *   <li>Close the queue and disconnect the Queue Manager</li>
+     * </ol>
+     *
+     * @param message The message to be sent to the MQ queue.
      */
-    public static void writeMsgIntoMQ(String message) {
-        // Set MQ environment properties using the configuration
-        MQEnvironment.hostname = configProperties.getProperty("mqhost");
+    public void writeMsgIntoMQ(String message) {
+        // Set MQ environment properties
+        MQEnvironment.hostname = mqHost;
         MQEnvironment.properties.put(MQC.TRANSPORT_PROPERTY, MQC.TRANSPORT_MQSERIES_CLIENT);
-        MQEnvironment.channel = configProperties.getProperty("mqchannel");
-        MQEnvironment.port = Integer.parseInt(configProperties.getProperty("mqport"));
-        MQEnvironment.userID = configProperties.getProperty("mquser");
-        MQEnvironment.password = configProperties.getProperty("mqpassword");
+        MQEnvironment.channel = mqChannel;
+        MQEnvironment.port = mqPort;
+        MQEnvironment.userID = mqUser;
+        MQEnvironment.password = mqPassword;
+
+        MQQueueManager queueManager = null;
+        MQQueue queue = null;
+        MQMessage mqMessage = null;
 
         try {
-            // Initialize MQ put message options
-            putMessageOptions = new MQPutMessageOptions();
-            putMessageOptions.options = MQC.MQPMO_DEFAULT_CONTEXT;
+            // Connect to MQ Queue Manager
+            queueManager = new MQQueueManager(mqQueueManager);
 
-            // Connect to the MQ Queue Manager
-            queueManager = new MQQueueManager(configProperties.getProperty("mqqueueManager"));
+            // Access queue
+            queue = queueManager.accessQueue(mqQueueName, openOptions, null, null, null);
 
-            // Open the queue for output
-            openOptions = MQC.MQOO_OUTPUT;
-            queue = queueManager.accessQueue(configProperties.getProperty("mqname"), openOptions, null, null, null);
-
-            // Create and configure the MQ message
+            // Create message
             mqMessage = new MQMessage();
             mqMessage.persistence = MQC.MQPER_PERSISTENT;
             mqMessage.format = MQC.MQFMT_STRING;
@@ -88,21 +118,27 @@ public class MQUtil extends BaseClass {
             mqMessage.messageId = MQC.MQMI_NONE;
             mqMessage.report = MQC.MQAT_IMS;
 
-            // Write the message content to the MQ message
+            // Write message string
             mqMessage.writeString(message);
 
-            // Put the message into the queue
+            // Put message to queue
             queue.put(mqMessage, putMessageOptions);
 
-            // Clear the message and close the queue
+            // Clear message and close queue
             mqMessage.clearMessage();
             queue.close();
 
-            // Disconnect from the queue manager
+            // Disconnect queue manager
             queueManager.disconnect();
         } catch (Exception e) {
-            // Log failure if unable to write the message into MQ
-            failLog("Unable to write message into MQ");
+            baseClass.failLog("Unable to write message into MQ: " + e.getMessage());
+        } finally {
+            try {
+                if (queue != null) queue.close();
+            } catch (Exception ignored) {}
+            try {
+                if (queueManager != null) queueManager.disconnect();
+            } catch (Exception ignored) {}
         }
     }
 }

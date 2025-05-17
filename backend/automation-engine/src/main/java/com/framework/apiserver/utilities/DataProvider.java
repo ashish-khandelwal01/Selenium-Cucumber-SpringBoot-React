@@ -1,76 +1,109 @@
 package com.framework.apiserver.utilities;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * DataProvider is a utility class that provides methods to read JSON data
- * and convert it into a format suitable for data-driven testing.
- * Extends BaseClass to utilize logging functionality.
+ * DataProvider is a Spring-managed component that reads JSON files
+ * and converts them into data-driven testing format.
  *
- * @see BaseClass
+ * <p>It provides methods to extract data from JSON arrays and parse JSON files
+ * into objects for use in testing scenarios.</p>
+ *
  * @see JsonObject
  * @see JsonArray
  * @see JsonElement
  * @see JsonParser
+ * @see Logger
  * @see FileReader
- * @see Map
- * @see Set
  *
  * @author ashish-khandelwal01
  */
-public class DataProvider extends BaseClass {
+@Component
+public class DataProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataProvider.class);
+
+    /**
+     * The default file path for the JSON data file, injected from application properties.
+     */
+    @Value("${dataprovider.file-path}")
+    private String defaultDataFilePath;
 
     /**
      * Reads a JSON file and retrieves data from a specified JSON array.
-     * Converts the JSON array into a two-dimensional Object array for use in data-driven testing.
      *
-     * @param data_file_path The path to the JSON file containing the data.
-     * @param json_array_name The name of the JSON array to retrieve data from.
-     * @return A two-dimensional Object array containing the data from the JSON array.
+     * @param jsonArrayName The name of the JSON array to extract.
+     * @return A 2D Object array representing test data.
      */
-    public Object[][] getDataProvider(String data_file_path, String json_array_name) {
-        JsonObject jsonObject = getJsonObject(data_file_path);
-        JsonArray testData = jsonObject.getAsJsonArray(json_array_name);
-        Object[][] data = new Object[testData.size()][((JsonObject) testData.get(0)).size()];
-        for (int i = 0; i < testData.size(); i++) {
+    public Object[][] getDataProvider(String jsonArrayName) {
+        return getDataProvider(defaultDataFilePath, jsonArrayName);
+    }
+
+    /**
+     * Reads a JSON file and retrieves data from a specified JSON array.
+     *
+     * @param dataFilePath   Path to the JSON file.
+     * @param jsonArrayName  JSON array name inside the file.
+     * @return A 2D Object array representing the data.
+     */
+    public Object[][] getDataProvider(String dataFilePath, String jsonArrayName) {
+        JsonObject jsonObject = getJsonObject(dataFilePath);
+        if (jsonObject == null || !jsonObject.has(jsonArrayName)) {
+            logger.error("Missing or invalid JSON array: {}", jsonArrayName);
+            return new Object[0][0];
+        }
+
+        JsonArray testData = jsonObject.getAsJsonArray(jsonArrayName);
+        if (testData.isEmpty()) return new Object[0][0];
+
+        int rowCount = testData.size();
+        int colCount = ((JsonObject) testData.get(0)).size();
+        Object[][] data = new Object[rowCount][colCount];
+
+        for (int i = 0; i < rowCount; i++) {
             Set<Map.Entry<String, JsonElement>> entrySet = testData.get(i).getAsJsonObject().entrySet();
             int j = 0;
             for (Map.Entry<String, JsonElement> entry : entrySet) {
-                if (entry.getValue().getAsString().matches("^([+-]?[0-9]\\d|0)$")) {
-                    data[i][j] = entry.getValue().getAsInt();
-                } else if (entry.getValue().getAsString().matches("^(?i)(true|false)$")) {
-                    data[i][j] = entry.getValue().getAsBoolean();
+                JsonElement element = entry.getValue();
+                if (element.isJsonPrimitive()) {
+                    JsonPrimitive primitive = element.getAsJsonPrimitive();
+                    if (primitive.isBoolean()) {
+                        data[i][j] = primitive.getAsBoolean();
+                    } else if (primitive.isNumber()) {
+                        data[i][j] = primitive.getAsInt(); // Or getAsDouble
+                    } else {
+                        data[i][j] = primitive.getAsString();
+                    }
                 } else {
-                    data[i][j] = entry.getValue().getAsString();
+                    data[i][j] = element.toString(); // For nested structures
                 }
                 j++;
             }
         }
+
         return data;
     }
 
     /**
-     * Reads a JSON file and parses it into a JsonObject.
+     * Parses a JSON file into a JsonObject.
      *
-     * @param data_file_path The path to the JSON file to read.
-     * @return A JsonObject representing the contents of the JSON file.
-     *         Returns null if the file is not found or cannot be parsed.
+     * @param dataFilePath Path to the JSON file.
+     * @return JsonObject or null on failure.
      */
-    public JsonObject getJsonObject(String data_file_path) {
-        JsonObject jsonObject = null;
-        try {
-            jsonObject = (JsonObject) new JsonParser().parse(new FileReader(data_file_path));
-        } catch (FileNotFoundException e) {
-            failLog("File not found: " + data_file_path);
+    private JsonObject getJsonObject(String dataFilePath) {
+        try (FileReader reader = new FileReader(dataFilePath)) {
+            return JsonParser.parseReader(reader).getAsJsonObject();
+        } catch (Exception e) {
+            logger.error("Error reading/parsing JSON from '{}': {}", dataFilePath, e.getMessage());
+            return null;
         }
-        return jsonObject;
     }
 }
