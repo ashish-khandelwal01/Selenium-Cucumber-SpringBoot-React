@@ -1,7 +1,6 @@
 package com.framework.apiserver.utilities;
 
 import com.framework.apiserver.config.FrameworkProperties;
-import com.framework.apiserver.config.MySqlDbProperties;
 import io.cucumber.java.Scenario;
 import lombok.Getter;
 import lombok.Setter;

@@ -6,7 +6,6 @@ import com.framework.apiserver.utilities.APIUtil;
 import com.framework.apiserver.utilities.BaseClass;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.framework.apiserver.service.TestExecutionService;
-import org.springframework.stereotype.Component;
 
 /**
  * BooksAPIStepDefinitions provides step definitions for interacting with the Books API.

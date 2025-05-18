@@ -9,7 +9,6 @@ import com.framework.apiserver.service.TestExecutionService;
 import io.cucumber.java.en.*;
 import org.openqa.selenium.WebDriver;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 /**
  * BookStoreDemoStepDefinitions provides step definitions for interacting with the Book Store application.

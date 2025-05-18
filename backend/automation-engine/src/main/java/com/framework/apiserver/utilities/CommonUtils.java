@@ -303,7 +303,7 @@ public class CommonUtils {
                     Files.copy(path, zs);
                     zs.closeEntry();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    baseClass.failLog("Zip creation failed. Error: " + e.getMessage());
                 }
             });
         }

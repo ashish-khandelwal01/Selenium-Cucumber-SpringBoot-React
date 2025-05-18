@@ -34,6 +34,7 @@ import javax.annotation.PostConstruct;
  * @see MQMessage
  * @see MQPutMessageOptions
  */
+@SuppressWarnings("deprecation")
 @Component
 public class MQUtil {
 
