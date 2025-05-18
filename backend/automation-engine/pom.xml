@@ -273,16 +273,6 @@
 					<includes>
 						<include>**/TestRunner.java</include>
 					</includes>
-					<!--					<excludes>-->
-					<!--						<exclude>**/SmokeTestSuite.java</exclude>-->
-					<!--					</excludes>-->
-					<systemPropertyVariables>
-						<extent.reporter.spark.start>true</extent.reporter.spark.start>
-						<extent.reporter.spark.out>Reports/SparkReport.html</extent.reporter.spark.out>
-						<basefolder.name>Reports</basefolder.name>
-						<screenshot.dir>Reports/Screenshots</screenshot.dir>
-						<screenshot.rel.path>Screenshots/</screenshot.rel.path>
-					</systemPropertyVariables>
 				</configuration>
 			</plugin>
 
