@@ -7,7 +7,7 @@ Feature:  Book Store Demo UI Application
     Given User wants to create a new browser instance
     And User navigate to the book store application login with url "https://demoqa.com"
 
-  @smoke, @smoke_ui
+  @smoke @smoke_ui
   Scenario Outline: Login and validate incorrect credentials
     Given User log in to the application with username "<username>" and password "<password>"
     Then User should see an error message

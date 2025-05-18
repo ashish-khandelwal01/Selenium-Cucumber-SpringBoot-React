@@ -7,6 +7,7 @@ import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRerunService;
+import com.framework.apiserver.testrunner.TestFailedRunner;
 import com.framework.apiserver.testrunner.TestRunner;
 import com.framework.apiserver.utilities.CommonUtils;
 import org.junit.runner.JUnitCore;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -82,7 +85,7 @@ public class TestRerunServiceImpl implements TestRerunService {
     public List<String> extractFailedScenarioPathsWithLineNumbers(String runId) {
         List<String> rerunList = new ArrayList<>();
         ObjectMapper mapper = new ObjectMapper();
-        Path cucumberJsonPath = Path.of(REPORTS_BASE_PATH, runId, "cucumber-report.json");
+        Path cucumberJsonPath = Path.of(REPORTS_BASE_PATH, runId, "cucumber-reports.json");
 
         try {
             JsonNode root = mapper.readTree(cucumberJsonPath.toFile());
@@ -101,7 +104,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                         if (hasFailure) {
                             int line = element.get("line").asInt();
                             // Construct path relative to your test resources
-                            rerunList.add("src/test/resources/" + uri + ":" + line);
+                            rerunList.add(uri + ":" + line);
                         }
                     }
                 }
@@ -134,10 +137,11 @@ public class TestRerunServiceImpl implements TestRerunService {
             String newRunId = CommonUtils.generateRunId();
             System.setProperty("run.id", newRunId);
 
-            String rerunPaths = String.join(",", failedScenarioPathsWithLines);
-            System.setProperty("cucumber.features", rerunPaths);
             LocalDateTime startTime = LocalDateTime.now();
-            Result result = JUnitCore.runClasses(TestRunner.class);
+            Path rerunFilePath = Paths.get("target/rerun.txt");
+            Files.write(rerunFilePath, failedScenarioPathsWithLines);
+            Result result = JUnitCore.runClasses(TestFailedRunner.class);
+            commonUtils.deleteFile(rerunFilePath.toString());
             int failureCount = result.getFailureCount();
             int total = result.getRunCount();
             int passed = total - failureCount;
@@ -151,8 +155,8 @@ public class TestRerunServiceImpl implements TestRerunService {
             System.out.println("Test execution completed with " + failureCount + " failures.");
 
             RunInfo runInfo = new RunInfo();
-            runInfo.setRunId(runId);
-            runInfo.setTags(rerunPaths);
+            runInfo.setRunId(newRunId);
+            runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
             runInfo.setStartTime(startTime);
             runInfo.setEndTime(endTime);
             runInfo.setDurationSeconds(durationSeconds);
@@ -163,10 +167,10 @@ public class TestRerunServiceImpl implements TestRerunService {
 
             String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
             if (latestReportFolder != null) {
-                commonUtils.moveReportToRunIdFolder(latestReportFolder, runId);
-                commonUtils.moveCucumberReportsToRunIdFolder(runId);
+                commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
+                commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
                 commonUtils.writeRunInfo(runInfo);
-                commonUtils.zipReportFolder(runId);
+                commonUtils.zipReportFolder(newRunId);
             }
 
             return new TestExecutionResponse(status, failureCount, newRunId);

@@ -220,7 +220,8 @@ public class CommonUtils {
     }
 
     /**
-     * Retrieves the most recently modified report folder from the specified base directory.
+     * Retrieves the most recently modified report folder from the specified base directory
+     * excluding the "target" folder.
      *
      * <p>This method scans the subdirectories of the given base directory and identifies
      * the one with the most recent modification timestamp.</p>
@@ -230,7 +231,7 @@ public class CommonUtils {
      */
     public String getMostRecentReportFolder(String baseDirPath) {
         File baseDir = new File(baseDirPath);
-        File[] subDirs = baseDir.listFiles(File::isDirectory);
+        File[] subDirs = baseDir.listFiles(file -> file.isDirectory() && !file.getName().equals("target"));
         if (subDirs == null || subDirs.length == 0) return null;
 
         return Arrays.stream(subDirs)
@@ -322,5 +323,24 @@ public class CommonUtils {
         Path destCucumberJson = Paths.get("reports", runId, "cucumber-reports.json");
         FileUtils.moveFile(new File("target/cucumber-reports.html"), destCucumberReportHtml.toFile());
         FileUtils.moveFile(new File("target/cucumber-reports.json"), destCucumberJson.toFile());
+    }
+
+    /**
+     * Deletes a file at the specified file path.
+     *
+     * <p>This method checks if the file exists at the given path and deletes it.
+     * If an exception occurs during the process, it logs the error using the BaseClass.</p>
+     *
+     * @param filePath The path of the file to be deleted.
+     */
+    public void deleteFile(String filePath) {
+        try {
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        } catch (Exception e) {
+            baseClass.failLog("Error in deleting file: " + e.getMessage());
+        }
     }
 }
