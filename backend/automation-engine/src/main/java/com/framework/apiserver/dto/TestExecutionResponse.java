@@ -35,14 +35,20 @@ public class TestExecutionResponse {
     private int exitCode;
 
     /**
+     * The run ID associated with the test execution.
+     */
+    private String runId;
+
+    /**
      * Constructs a TestExecutionResponse instance with the specified status and exit code.
      *
      * @param status The status of the test execution.
      * @param exitCode The exit code of the test execution process.
      */
-    public TestExecutionResponse(String status, int exitCode) {
+    public TestExecutionResponse(String status, int exitCode, String runId) {
         this.status = status;
         this.exitCode = exitCode;
+        this.runId = runId;
     }
 
 }

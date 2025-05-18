@@ -2,6 +2,8 @@ package com.framework.apiserver.controller;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +48,14 @@ public class TestExecutionController {
      *             Defaults to an empty string if not provided.
      * @return A TestExecutionResponse object containing the results of the test execution.
      */
+    @Operation(
+            summary = "Execute Cucumber tests with a specific tag",
+            description = "Triggers the execution of Cucumber tests filtered by the provided tag and returns execution status.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Test execution completed successfully"),
+                    @ApiResponse(responseCode = "500", description = "Error during test execution")
+            }
+    )
     @PostMapping("/run")
     public TestExecutionResponse runTests(@RequestParam(defaultValue = "") String tags) {
         return testExecutionService.runCucumberTests(tags);
