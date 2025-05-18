@@ -88,7 +88,6 @@ public class SeleniumTestBase {
         switch (browser.toLowerCase()) {
             case "chrome":
                 ChromeOptions chromeOptions = new ChromeOptions();
-                chromeOptions.addArguments("user-data-dir=C:/temp/freshprofile");
                 chromeOptions.addArguments("--disable-features=PasswordCheck,AutofillKeyedData,SafeBrowsingEnhancedProtection");
                 chromeOptions.addArguments("--disable-sync");
                 chromeOptions.addArguments("--start-maximized");
@@ -98,11 +97,11 @@ public class SeleniumTestBase {
                 chromeOptions.setExperimentalOption("prefs", browserPref);
 
                 if ("headless".equalsIgnoreCase(browserMode)) {
-                    chromeOptions.addArguments("--headless=new"); // Modern headless mode
+                    chromeOptions.addArguments("--headless");
+                    chromeOptions.addArguments("--window-size=1600,900");
                     chromeOptions.addArguments("--no-sandbox");
                     chromeOptions.addArguments("--disable-dev-shm-usage");
                     chromeOptions.addArguments("--disable-gpu");
-                    chromeOptions.addArguments("--window-size=1920,1080");
                 }
 
                 driver = new ChromeDriver(chromeOptions);
@@ -117,10 +116,11 @@ public class SeleniumTestBase {
                 edgeOptions.setExperimentalOption("prefs", browserPref);
 
                 if ("headless".equalsIgnoreCase(browserMode)) {
-                    edgeOptions.addArguments("--headless=new");
+                    edgeOptions.addArguments("--headless");
                     edgeOptions.addArguments("--no-sandbox");
                     edgeOptions.addArguments("--disable-dev-shm-usage");
-                    edgeOptions.addArguments("--window-size=1920,1080");
+                    edgeOptions.addArguments("--window-size=1600,900");
+                    edgeOptions.addArguments("--disable-gpu");
                 }
 
                 driver = new EdgeDriver(edgeOptions);
