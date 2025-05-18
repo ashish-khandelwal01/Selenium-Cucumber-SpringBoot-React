@@ -4,33 +4,30 @@ import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.testrunner.TestRunner;
+import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
- * TestExecutionService is a service class responsible for executing Cucumber tests
- * and returning the results of the test execution.
+ * Implementation of the TestExecutionService interface.
  *
- * <p>It uses JUnitCore to run the tests and processes the results to provide
- * a summary of the execution status and failure count.</p>
+ * <p>This service is responsible for executing Cucumber tests, processing the results,
+ * and managing asynchronous test execution jobs.</p>
  *
  * <p>Annotations:</p>
  * <ul>
- *   <li>@Service: Indicates that this class is a Spring service component.</li>
+ *   <li>@Service: Marks this class as a Spring service component.</li>
+ *   <li>@Async: Indicates that the method should be executed asynchronously.</li>
  * </ul>
  *
- * <p>Usage:</p>
- * <ul>
- *   <li>Call the runCucumberTests method with a specific tag to execute tests
- *       filtered by that tag.</li>
- * </ul>
- *
+ * @see TestExecutionService
  * @see TestExecutionResponse
  * @see TestRunner
  */
@@ -40,15 +37,18 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     @Autowired
     private CommonUtils commonUtils;
 
+    @Autowired
+    private AsyncJobManager asyncJobManager;
+
     /**
      * Executes Cucumber tests filtered by the specified tag.
      *
-     * <p>Sets the system property for Cucumber tag filtering, runs the tests
-     * using JUnitCore, and processes the results to determine the execution status.</p>
+     * <p>This method sets system properties for Cucumber tag filtering, runs the tests
+     * using JUnitCore, and processes the results to generate a summary of the execution.</p>
      *
      * @param tag The Cucumber tag used to filter the tests to be executed.
-     * @return A TestExecutionResponse object containing the execution status
-     *         and the number of test failures.
+     * @return A TestExecutionResponse object containing the execution status,
+     *         the number of test failures, and the run ID.
      */
     public TestExecutionResponse runCucumberTests(String tag) {
         try {
@@ -91,6 +91,26 @@ public class TestExecutionServiceImpl implements TestExecutionService {
             return new TestExecutionResponse(status, failureCount, runId);
         } catch (Exception e) {
             return new TestExecutionResponse("Execution Failed: " + e.getMessage(), -1, null);
+        }
+    }
+
+    /**
+     * Executes Cucumber tests asynchronously based on the specified tag and job ID.
+     *
+     * <p>This method updates the job status to "running", executes the tests,
+     * and updates the job status to "completed" or "failed" based on the result.</p>
+     *
+     * @param tag   The Cucumber tag used to filter the tests to be executed.
+     * @param jobId The unique identifier of the asynchronous job.
+     */
+    @Async
+    public void runTestsAsync(String tag, String jobId) {
+        asyncJobManager.setJobRunning(jobId);
+        try {
+            TestExecutionResponse response = runCucumberTests(tag);
+            asyncJobManager.completeJob(jobId, response);
+        } catch (Exception e) {
+            asyncJobManager.failJob(jobId);
         }
     }
 }

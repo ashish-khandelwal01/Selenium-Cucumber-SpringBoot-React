@@ -2,20 +2,21 @@ package com.framework.apiserver.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRerunService;
 import com.framework.apiserver.testrunner.TestFailedRunner;
-import com.framework.apiserver.testrunner.TestRunner;
+import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
 import org.junit.runner.JUnitCore;
 import org.junit.runner.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,10 +24,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of the TestRerunService interface.
@@ -40,6 +38,9 @@ public class TestRerunServiceImpl implements TestRerunService {
 
     @Autowired
     private TestExecutionService testExecutionService;
+
+    @Autowired
+    private AsyncJobManager asyncJobManager;
 
     @Autowired
     private CommonUtils commonUtils;
@@ -110,7 +111,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error reading cucumber report: " + e.getMessage());
         }
 
         return rerunList;
@@ -179,4 +180,95 @@ public class TestRerunServiceImpl implements TestRerunService {
             return new TestExecutionResponse("Rerun Failed: " + e.getMessage(), -1,null);
         }
     }
+
+    /**
+     * Reruns all tests asynchronously for the specified run ID.
+     *
+     * <p>This method retrieves the tags associated with the given run ID and triggers
+     * the execution of all tests asynchronously. It updates the job status accordingly.</p>
+     *
+     * @param runId The unique identifier of the test run to rerun.
+     * @param jobId The unique identifier of the asynchronous job.
+     */
+    @Async
+    public void rerunTestsAsync(String runId, String jobId) {
+        asyncJobManager.setJobRunning(jobId);
+        try {
+            File infoFile = new File(REPORTS_BASE_PATH + "/" + runId + "/run-info.json");
+            if (!infoFile.exists()) {
+                throw new FileNotFoundException("Run ID not found: " + runId);
+            }
+
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(infoFile);
+            String tags = node.get("tags").asText();
+            TestExecutionResponse response = testExecutionService.runCucumberTests(tags);
+            asyncJobManager.completeJob(jobId, response);
+        } catch (Exception e) {
+            asyncJobManager.failJob(jobId);
+        }
+    }
+
+    /**
+     * Reruns only the failed tests asynchronously for the specified run ID.
+     *
+     * <p>This method identifies failed scenarios from the cucumber report for the given run ID
+     * and triggers their execution asynchronously. It updates the job status accordingly.</p>
+     *
+     * @param runId The unique identifier of the test run to rerun failed tests.
+     * @param jobId The unique identifier of the asynchronous job.
+     */
+    @Async
+    public void rerunFailedTestsAsync(String runId, String jobId) {
+        asyncJobManager.setJobRunning(jobId);
+        try {
+            List<String> failedScenarioPathsWithLines = extractFailedScenarioPathsWithLineNumbers(runId);
+            if (failedScenarioPathsWithLines.isEmpty()) {
+                throw new FileNotFoundException("No failed scenarios found for runId " + runId);
+            }
+
+            String newRunId = CommonUtils.generateRunId();
+            System.setProperty("run.id", newRunId);
+
+            LocalDateTime startTime = LocalDateTime.now();
+            Path rerunFilePath = Paths.get("target/rerun.txt");
+            Files.write(rerunFilePath, failedScenarioPathsWithLines);
+            Result result = JUnitCore.runClasses(TestFailedRunner.class);
+            commonUtils.deleteFile(rerunFilePath.toString());
+            int failureCount = result.getFailureCount();
+            int total = result.getRunCount();
+            int passed = total - failureCount;
+
+            String status = failureCount == 0
+                    ? "Rerun Successful"
+                    : "Rerun Completed with Failures: " + failureCount;
+
+            LocalDateTime endTime = LocalDateTime.now();
+            long durationSeconds = Duration.between(startTime, endTime).getSeconds();
+            System.out.println("Test execution completed with " + failureCount + " failures.");
+
+            RunInfo runInfo = new RunInfo();
+            runInfo.setRunId(newRunId);
+            runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
+            runInfo.setStartTime(startTime);
+            runInfo.setEndTime(endTime);
+            runInfo.setDurationSeconds(durationSeconds);
+            runInfo.setTotal(total);
+            runInfo.setPassed(passed);
+            runInfo.setFailed(failureCount);
+            runInfo.setStatus(status);
+
+            String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
+            if (latestReportFolder != null) {
+                commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
+                commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
+                commonUtils.writeRunInfo(runInfo);
+                commonUtils.zipReportFolder(newRunId);
+            }
+            asyncJobManager.completeJob(jobId, new TestExecutionResponse(status, failureCount, newRunId));
+        } catch (Exception e) {
+            asyncJobManager.failJob(jobId);
+        }
+    }
+
 }

@@ -6,4 +6,7 @@ public interface TestExecutionService {
 
     TestExecutionResponse runCucumberTests(String tag) ;
 
+    void runTestsAsync(String tag, String jobId);
+
+
 }

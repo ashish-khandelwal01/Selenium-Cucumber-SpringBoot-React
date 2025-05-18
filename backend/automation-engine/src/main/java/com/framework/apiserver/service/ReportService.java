@@ -2,7 +2,6 @@ package com.framework.apiserver.service;
 
 import com.framework.apiserver.dto.ReportMetaData;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
