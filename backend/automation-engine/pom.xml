@@ -38,6 +38,13 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<version>${spring.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- PostgreSQL driver -->
 		<dependency>
 			<groupId>org.postgresql</groupId>

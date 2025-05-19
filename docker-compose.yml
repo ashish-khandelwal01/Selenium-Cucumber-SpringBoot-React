@@ -11,6 +11,39 @@ services:
       POSTGRES_DB: automation_engine_cucumber_react
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  
+  backend:
+    container_name: springboot-backend
+    build:
+      context: ./backend/automation-engine
+      dockerfile: DockerFile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/automation-engine:/app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/automation_engine_cucumber_react
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+    depends_on:
+      - postgres
+
+  frontend:
+    container_name: react-frontend
+    build:
+      context: ./frontend/test-dashboard
+      dockerfile: DockerFile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/test-dashboard:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
