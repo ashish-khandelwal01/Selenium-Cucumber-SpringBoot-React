@@ -112,7 +112,7 @@ public class DashboardServiceImpl implements DashboardService {
         List<TestRunInfoEntity> recentRuns = repository.findByStartTimeAfter(since);
 
         long total = recentRuns.size();
-        long passed = recentRuns.stream().filter(run -> "PASSED".equalsIgnoreCase(run.getStatus())).count();
+        long passed = recentRuns.stream().filter(run -> "Execution Successful".equalsIgnoreCase(run.getStatus())).count();
         long failed = total - passed;
 
         Map<String, Object> stats = new HashMap<>();

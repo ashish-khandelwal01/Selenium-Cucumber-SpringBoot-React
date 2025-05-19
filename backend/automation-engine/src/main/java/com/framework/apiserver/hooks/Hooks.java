@@ -9,9 +9,12 @@ import com.framework.apiserver.utilities.CommonUtils;
 import com.framework.apiserver.utilities.DriverManager;
 import com.framework.apiserver.utilities.SeleniumTestBase;
 import io.cucumber.java.*;
+import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
+import com.framework.apiserver.config.SpringContext;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -42,7 +45,7 @@ import java.util.*;
  * @see DriverManager
  * @see SeleniumTestBase
  */
-@Component
+
 @RequiredArgsConstructor
 public class Hooks {
 
@@ -56,8 +59,8 @@ public class Hooks {
 
     @Autowired
     private CommonUtils commonUtils;
-
-    private final TestRunInfoService testRunInfoService;
+    @Autowired
+    private static TestRunInfoService testRunInfoService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -103,9 +106,12 @@ public class Hooks {
      * parses its content, and saves the test run information to the database.</p>
      */
     @AfterAll
-    public void afterAll() {
+    public static void afterAll() {
         String reportsDir = "reports";
         // Look for most recently created run folder (optional logic)
+        TestRunInfoService testRunInfoService = SpringContext.getBean(TestRunInfoService.class);
+        CommonUtils commonUtils = SpringContext.getBean(CommonUtils.class);
+
         File latestRunDir = new File(commonUtils.getMostRecentReportFolder(reportsDir));
 
         File runInfoFile = new File(latestRunDir, "run-info.json");
@@ -114,22 +120,22 @@ public class Hooks {
             return;
         }
         try {
+            ObjectMapper objectMapper = new ObjectMapper();
             JsonNode node = objectMapper.readTree(runInfoFile);
             TestRunInfoEntity runInfo = new TestRunInfoEntity();
 
             runInfo.setRunId(node.path("runId").asText());
-            runInfo.setStartTime(LocalDateTime.parse(node.path("startTime").asText()));
-            runInfo.setEndTime(LocalDateTime.parse(node.path("endTime").asText()));
-            runInfo.setDurationSeconds(node.path("durationSeconds").asInt());
-            runInfo.setTotal(node.path("total").asInt());
-            runInfo.setPassed(node.path("passed").asInt());
-            runInfo.setFailed(node.path("failed").asInt());
+            runInfo.setStartTime(LocalDateTime.parse(node.path("Start Time").asText()));
+            runInfo.setEndTime(LocalDateTime.parse(node.path("End Time").asText()));
+            runInfo.setDurationSeconds(node.path("Duration in Seconds").asInt());
+            runInfo.setTotal(node.path("Total").asInt());
+            runInfo.setPassed(node.path("Passed").asInt());
+            runInfo.setFailed(node.path("Failed").asInt());
             runInfo.setStatus(node.path("status").asText());
 
             // Parse the "failures" array if it exists
             List<String> failures = commonUtils.extractFailedScenarioPathsWithLineNumbers(reportsDir, node.path("runId").asText());
             runInfo.setFailureScenarios(failures);
-
             testRunInfoService.save(runInfo);
 
             System.out.println("✅ run-info.json imported to DB successfully.");
