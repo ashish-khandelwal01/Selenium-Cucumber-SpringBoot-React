@@ -16,5 +16,6 @@ public enum JobStatus {
     PENDING,    // The job is created but not yet started.
     RUNNING,    // The job is currently in progress.
     COMPLETED,  // The job has finished successfully.
-    FAILED      // The job has encountered an error and did not complete successfully.
+    FAILED,      // The job has encountered an error and did not complete successfully.
+    CANCELLED   // The job has been canceled by the user or system.
 }

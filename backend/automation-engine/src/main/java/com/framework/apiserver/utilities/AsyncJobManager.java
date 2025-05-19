@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AsyncJobManager {
 
     private final Map<String, JobStatus> jobStatusMap = new ConcurrentHashMap<>();
+    private final Map<String, Thread> jobThreadMap = new ConcurrentHashMap<>();
     private final Map<String, TestExecutionResponse> jobResultMap = new ConcurrentHashMap<>();
 
     public String createJob() {
@@ -19,18 +20,27 @@ public class AsyncJobManager {
         jobStatusMap.put(jobId, JobStatus.PENDING);
         return jobId;
     }
+    public void registerJobThread(String jobId, Thread thread) {
+        jobThreadMap.put(jobId, thread);
+    }
 
     public void setJobRunning(String jobId) {
         jobStatusMap.put(jobId, JobStatus.RUNNING);
     }
 
+    public void updateJobStatus(String jobId, JobStatus status) {
+        jobStatusMap.put(jobId, status);
+    }
+
     public void completeJob(String jobId, TestExecutionResponse response) {
         jobStatusMap.put(jobId, JobStatus.COMPLETED);
         jobResultMap.put(jobId, response);
+        jobThreadMap.remove(jobId);
     }
 
     public void failJob(String jobId) {
         jobStatusMap.put(jobId, JobStatus.FAILED);
+        jobThreadMap.remove(jobId);
     }
 
     public JobStatus getStatus(String jobId) {
@@ -39,5 +49,16 @@ public class AsyncJobManager {
 
     public TestExecutionResponse getResult(String jobId) {
         return jobResultMap.get(jobId);
+    }
+
+    public boolean cancelJob(String jobId) {
+        Thread thread = jobThreadMap.get(jobId);
+        if (thread != null && thread.isAlive()) {
+            thread.interrupt(); // Send interrupt signal
+            updateJobStatus(jobId, JobStatus.CANCELLED);
+            jobThreadMap.remove(jobId);
+            return true;
+        }
+        return false;
     }
 }

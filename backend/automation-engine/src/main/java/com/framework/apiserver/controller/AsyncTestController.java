@@ -124,4 +124,30 @@ public class AsyncTestController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Attempts to cancel an ongoing asynchronous job using jobId.
+     *
+     * @param jobId The unique identifier of the job to be canceled.
+     * @return A ResponseEntity indicating whether the job was successfully canceled or not.
+     */
+    @Operation(
+            summary = "Cancel an async job",
+            description = "Attempts to cancel an ongoing asynchronous job using jobId.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Job cancelled successfully"),
+                    @ApiResponse(responseCode = "404", description = "Job not found or already completed")
+            }
+    )
+    @DeleteMapping("/cancel/{jobId}")
+    public ResponseEntity<?> cancelJob(@PathVariable String jobId) {
+        boolean cancelled = asyncJobManager.cancelJob(jobId);
+        if (cancelled) {
+            return ResponseEntity.ok("Job cancelled successfully");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Job not found or already completed");
+        }
+    }
+
 }

@@ -190,23 +190,27 @@ public class TestRerunServiceImpl implements TestRerunService {
      * @param runId The unique identifier of the test run to rerun.
      * @param jobId The unique identifier of the asynchronous job.
      */
-    @Async
     public void rerunTestsAsync(String runId, String jobId) {
-        asyncJobManager.setJobRunning(jobId);
-        try {
-            File infoFile = new File(REPORTS_BASE_PATH + "/" + runId + "/run-info.json");
-            if (!infoFile.exists()) {
-                throw new FileNotFoundException("Run ID not found: " + runId);
-            }
+        Thread jobThread = new Thread(() -> {
+            asyncJobManager.setJobRunning(jobId);
+            try {
+                File infoFile = new File(REPORTS_BASE_PATH + "/" + runId + "/run-info.json");
+                if (!infoFile.exists()) {
+                    throw new FileNotFoundException("Run ID not found: " + runId);
+                }
 
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(infoFile);
-            String tags = node.get("tags").asText();
-            TestExecutionResponse response = testExecutionService.runCucumberTests(tags);
-            asyncJobManager.completeJob(jobId, response);
-        } catch (Exception e) {
-            asyncJobManager.failJob(jobId);
-        }
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(infoFile);
+                String tags = node.get("tags").asText();
+                TestExecutionResponse response = testExecutionService.runCucumberTests(tags);
+                asyncJobManager.completeJob(jobId, response);
+            } catch (Exception e) {
+                asyncJobManager.failJob(jobId);
+            }
+        });
+
+        asyncJobManager.registerJobThread(jobId, jobThread);
+        jobThread.start();
     }
 
     /**
@@ -218,57 +222,61 @@ public class TestRerunServiceImpl implements TestRerunService {
      * @param runId The unique identifier of the test run to rerun failed tests.
      * @param jobId The unique identifier of the asynchronous job.
      */
-    @Async
     public void rerunFailedTestsAsync(String runId, String jobId) {
-        asyncJobManager.setJobRunning(jobId);
-        try {
-            List<String> failedScenarioPathsWithLines = extractFailedScenarioPathsWithLineNumbers(runId);
-            if (failedScenarioPathsWithLines.isEmpty()) {
-                throw new FileNotFoundException("No failed scenarios found for runId " + runId);
+        Thread jobThread = new Thread(() -> {
+            asyncJobManager.setJobRunning(jobId);
+            try {
+                List<String> failedScenarioPathsWithLines = extractFailedScenarioPathsWithLineNumbers(runId);
+                if (failedScenarioPathsWithLines.isEmpty()) {
+                    throw new FileNotFoundException("No failed scenarios found for runId " + runId);
+                }
+
+                String newRunId = CommonUtils.generateRunId();
+                System.setProperty("run.id", newRunId);
+
+                LocalDateTime startTime = LocalDateTime.now();
+                Path rerunFilePath = Paths.get("target/rerun.txt");
+                Files.write(rerunFilePath, failedScenarioPathsWithLines);
+                Result result = JUnitCore.runClasses(TestFailedRunner.class);
+                commonUtils.deleteFile(rerunFilePath.toString());
+                int failureCount = result.getFailureCount();
+                int total = result.getRunCount();
+                int passed = total - failureCount;
+
+                String status = failureCount == 0
+                        ? "Rerun Successful"
+                        : "Rerun Completed with Failures: " + failureCount;
+
+                LocalDateTime endTime = LocalDateTime.now();
+                long durationSeconds = Duration.between(startTime, endTime).getSeconds();
+                System.out.println("Test execution completed with " + failureCount + " failures.");
+
+                RunInfo runInfo = new RunInfo();
+                runInfo.setRunId(newRunId);
+                runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
+                runInfo.setStartTime(startTime);
+                runInfo.setEndTime(endTime);
+                runInfo.setDurationSeconds(durationSeconds);
+                runInfo.setTotal(total);
+                runInfo.setPassed(passed);
+                runInfo.setFailed(failureCount);
+                runInfo.setStatus(status);
+
+                String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
+                if (latestReportFolder != null) {
+                    commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
+                    commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
+                    commonUtils.writeRunInfo(runInfo);
+                    commonUtils.zipReportFolder(newRunId);
+                }
+                asyncJobManager.completeJob(jobId, new TestExecutionResponse(status, failureCount, newRunId));
+            } catch (Exception e) {
+                asyncJobManager.failJob(jobId);
             }
+        });
 
-            String newRunId = CommonUtils.generateRunId();
-            System.setProperty("run.id", newRunId);
-
-            LocalDateTime startTime = LocalDateTime.now();
-            Path rerunFilePath = Paths.get("target/rerun.txt");
-            Files.write(rerunFilePath, failedScenarioPathsWithLines);
-            Result result = JUnitCore.runClasses(TestFailedRunner.class);
-            commonUtils.deleteFile(rerunFilePath.toString());
-            int failureCount = result.getFailureCount();
-            int total = result.getRunCount();
-            int passed = total - failureCount;
-
-            String status = failureCount == 0
-                    ? "Rerun Successful"
-                    : "Rerun Completed with Failures: " + failureCount;
-
-            LocalDateTime endTime = LocalDateTime.now();
-            long durationSeconds = Duration.between(startTime, endTime).getSeconds();
-            System.out.println("Test execution completed with " + failureCount + " failures.");
-
-            RunInfo runInfo = new RunInfo();
-            runInfo.setRunId(newRunId);
-            runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
-            runInfo.setStartTime(startTime);
-            runInfo.setEndTime(endTime);
-            runInfo.setDurationSeconds(durationSeconds);
-            runInfo.setTotal(total);
-            runInfo.setPassed(passed);
-            runInfo.setFailed(failureCount);
-            runInfo.setStatus(status);
-
-            String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
-            if (latestReportFolder != null) {
-                commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
-                commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
-                commonUtils.writeRunInfo(runInfo);
-                commonUtils.zipReportFolder(newRunId);
-            }
-            asyncJobManager.completeJob(jobId, new TestExecutionResponse(status, failureCount, newRunId));
-        } catch (Exception e) {
-            asyncJobManager.failJob(jobId);
-        }
+        asyncJobManager.registerJobThread(jobId, jobThread);
+        jobThread.start();
     }
 
 }

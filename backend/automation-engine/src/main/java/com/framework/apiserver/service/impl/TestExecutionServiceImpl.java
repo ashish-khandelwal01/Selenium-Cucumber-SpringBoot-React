@@ -103,14 +103,17 @@ public class TestExecutionServiceImpl implements TestExecutionService {
      * @param tag   The Cucumber tag used to filter the tests to be executed.
      * @param jobId The unique identifier of the asynchronous job.
      */
-    @Async
     public void runTestsAsync(String tag, String jobId) {
-        asyncJobManager.setJobRunning(jobId);
-        try {
-            TestExecutionResponse response = runCucumberTests(tag);
-            asyncJobManager.completeJob(jobId, response);
-        } catch (Exception e) {
-            asyncJobManager.failJob(jobId);
-        }
+        Thread jobThread = new Thread(() -> {
+            asyncJobManager.setJobRunning(jobId);
+            try {
+                TestExecutionResponse response = runCucumberTests(tag);
+                asyncJobManager.completeJob(jobId, response);
+            } catch (Exception e) {
+                asyncJobManager.failJob(jobId);
+            }
+        });
+        asyncJobManager.registerJobThread(jobId, jobThread);
+        jobThread.start();
     }
 }
