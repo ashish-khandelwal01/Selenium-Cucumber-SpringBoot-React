@@ -4,6 +4,8 @@ import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -141,7 +143,13 @@ public class DashboardServiceImpl implements DashboardService {
      *
      * @return A list of all test runs.
      */
+    @Override
     public List<TestRunInfoEntity> getAllRunsInfo() {
         return repository.findAll(Sort.by(Sort.Direction.DESC, "startTime"));
+    }
+
+    @Override
+    public Page<TestRunInfoEntity> getAllRunsInfo(Pageable pageable) {
+        return repository.findAll(pageable);
     }
 }

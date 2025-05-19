@@ -7,6 +7,8 @@ import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.DashboardService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,6 +53,24 @@ public class DashboardController {
     @GetMapping("/runs")
     public List<TestRunInfoEntity> getAllRuns() {
         return dashboardService.getAllRunsInfo();
+    }
+
+    /**
+     * Retrieves all test runs sorted by start time in descending order.
+     *
+     * @return A list of all test runs.
+     */
+    @Operation(
+            summary = "Get all test runs with pagination",
+            description = "Retrieves all test runs sorted by start time in descending order with pagination.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "List of all test runs retrieved successfully"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @GetMapping("/runs/pages")
+    public Page<TestRunInfoEntity> getAllRunsPages(Pageable pageable) {
+        return dashboardService.getAllRunsInfo(pageable);
     }
 
     /**

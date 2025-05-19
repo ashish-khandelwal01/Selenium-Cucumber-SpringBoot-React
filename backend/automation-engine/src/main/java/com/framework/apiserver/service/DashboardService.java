@@ -7,6 +7,8 @@ import com.framework.apiserver.dto.dashboard.WeeklySummaryResponse;
 import com.framework.apiserver.entity.TestRunInfoEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -24,4 +26,6 @@ public interface DashboardService {
     Map<String, Object> getStatsLast7Days();
     List<TestRunInfoEntity> getLatestRunsInfo(int count);
     List<TestRunInfoEntity> getAllRunsInfo();
+    Page<TestRunInfoEntity> getAllRunsInfo(Pageable pageable);
+
 }
