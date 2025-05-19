@@ -2,15 +2,22 @@ package com.framework.apiserver.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.framework.apiserver.dto.ReportMetaData;
+import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.ReportService;
+import org.modelmapper.ModelMapper;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.framework.apiserver.service.TestRunInfoService;
+
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service class for managing test reports.
@@ -20,6 +27,16 @@ import java.util.List;
  */
 @Service
 public class ReportServiceImpl implements ReportService {
+
+    @Autowired
+    private TestRunInfoRepository testRunInfoRepository;
+
+    private final ModelMapper modelMapper;
+
+    @Autowired
+    public ReportServiceImpl(ModelMapper modelMapper) {
+        this.modelMapper = modelMapper;
+    }
 
     private static final String REPORTS_BASE_PATH = "reports";
 
@@ -68,26 +85,10 @@ public class ReportServiceImpl implements ReportService {
      * @return A list of `ReportMetaData` objects representing the available test reports.
      */
     public List<ReportMetaData> listAllReports() {
-        File baseDir = new File(REPORTS_BASE_PATH);
-        List<ReportMetaData> reports = new ArrayList<>();
-        ObjectMapper mapper = new ObjectMapper();
-
-        if (baseDir.exists()) {
-            for (File runDir : baseDir.listFiles()) {
-                if (runDir.isDirectory()) {
-                    File infoFile = new File(runDir, "run-info.json");
-                    if (infoFile.exists()) {
-                        try {
-                            ReportMetaData meta = mapper.readValue(infoFile, ReportMetaData.class);
-                            reports.add(meta);
-                        } catch (IOException e) {
-                            // Log warning and skip
-                        }
-                    }
-                }
-            }
-        }
-        return reports;
+        List<TestRunInfoEntity> entities = testRunInfoRepository.findAll();
+        return entities.stream()
+                .map(entity -> modelMapper.map(entity, ReportMetaData.class))
+                .collect(Collectors.toList());
     }
 
     /**

@@ -6,6 +6,7 @@ import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRerunService;
+import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.testrunner.TestFailedRunner;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
@@ -39,6 +40,8 @@ public class TestRerunServiceImpl implements TestRerunService {
     @Autowired
     private TestExecutionService testExecutionService;
 
+    @Autowired
+    private TestRunInfoService testRunInfoService;
     @Autowired
     private AsyncJobManager asyncJobManager;
 
@@ -85,7 +88,7 @@ public class TestRerunServiceImpl implements TestRerunService {
      */
     @Override
     public TestExecutionResponse rerunFailed(String runId) {
-        List<String> failedScenarioPathsWithLines = commonUtils.extractFailedScenarioPathsWithLineNumbers(REPORTS_BASE_PATH, runId);
+        List<String> failedScenarioPathsWithLines = testRunInfoService.getFailureScenarios(runId);
         if (failedScenarioPathsWithLines.isEmpty()) {
             return new TestExecutionResponse("No failed scenarios found for runId " + runId, 0, null);
         }
@@ -182,7 +185,7 @@ public class TestRerunServiceImpl implements TestRerunService {
         Thread jobThread = new Thread(() -> {
             asyncJobManager.setJobRunning(jobId);
             try {
-                List<String> failedScenarioPathsWithLines = commonUtils.extractFailedScenarioPathsWithLineNumbers(REPORTS_BASE_PATH, runId);
+                List<String> failedScenarioPathsWithLines = testRunInfoService.getFailureScenarios(runId);
                 if (failedScenarioPathsWithLines.isEmpty()) {
                     throw new FileNotFoundException("No failed scenarios found for runId " + runId);
                 }
