@@ -74,50 +74,6 @@ public class TestRerunServiceImpl implements TestRerunService {
     }
 
     /**
-     * Extracts the paths and line numbers of failed scenarios from the cucumber report.
-     *
-     * <p>This method reads the `cucumber-report.json` file for the specified run ID
-     * and identifies scenarios that failed. It constructs a list of paths with line
-     * numbers for rerunning the failed scenarios.</p>
-     *
-     * @param runId The unique identifier of the test run.
-     * @return A list of strings representing the paths and line numbers of failed scenarios.
-     */
-    public List<String> extractFailedScenarioPathsWithLineNumbers(String runId) {
-        List<String> rerunList = new ArrayList<>();
-        ObjectMapper mapper = new ObjectMapper();
-        Path cucumberJsonPath = Path.of(REPORTS_BASE_PATH, runId, "cucumber-reports.json");
-
-        try {
-            JsonNode root = mapper.readTree(cucumberJsonPath.toFile());
-            for (JsonNode feature : root) {
-                String uri = feature.get("uri").asText();
-                for (JsonNode element : feature.get("elements")) {
-                    if (element.get("type").asText().equals("scenario")) {
-                        boolean hasFailure = false;
-                        for (JsonNode step : element.get("steps")) {
-                            String result = step.get("result").get("status").asText();
-                            if ("failed".equals(result)) {
-                                hasFailure = true;
-                                break;
-                            }
-                        }
-                        if (hasFailure) {
-                            int line = element.get("line").asInt();
-                            // Construct path relative to your test resources
-                            rerunList.add(uri + ":" + line);
-                        }
-                    }
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error reading cucumber report: " + e.getMessage());
-        }
-
-        return rerunList;
-    }
-
-    /**
      * Reruns only the failed tests for the specified run ID.
      *
      * <p>This method identifies failed scenarios from the cucumber report for the given run ID
@@ -129,7 +85,7 @@ public class TestRerunServiceImpl implements TestRerunService {
      */
     @Override
     public TestExecutionResponse rerunFailed(String runId) {
-        List<String> failedScenarioPathsWithLines = extractFailedScenarioPathsWithLineNumbers(runId);
+        List<String> failedScenarioPathsWithLines = commonUtils.extractFailedScenarioPathsWithLineNumbers(REPORTS_BASE_PATH, runId);
         if (failedScenarioPathsWithLines.isEmpty()) {
             return new TestExecutionResponse("No failed scenarios found for runId " + runId, 0, null);
         }
@@ -226,7 +182,7 @@ public class TestRerunServiceImpl implements TestRerunService {
         Thread jobThread = new Thread(() -> {
             asyncJobManager.setJobRunning(jobId);
             try {
-                List<String> failedScenarioPathsWithLines = extractFailedScenarioPathsWithLineNumbers(runId);
+                List<String> failedScenarioPathsWithLines = commonUtils.extractFailedScenarioPathsWithLineNumbers(REPORTS_BASE_PATH, runId);
                 if (failedScenarioPathsWithLines.isEmpty()) {
                     throw new FileNotFoundException("No failed scenarios found for runId " + runId);
                 }

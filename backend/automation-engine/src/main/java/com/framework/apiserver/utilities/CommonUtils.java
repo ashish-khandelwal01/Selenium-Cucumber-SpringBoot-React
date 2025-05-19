@@ -1,5 +1,7 @@
 package com.framework.apiserver.utilities;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.framework.apiserver.dto.RunInfo;
 import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
@@ -20,9 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -342,5 +342,49 @@ public class CommonUtils {
         } catch (Exception e) {
             baseClass.failLog("Error in deleting file: " + e.getMessage());
         }
+    }
+
+    /**
+     * Extracts the paths and line numbers of failed scenarios from the cucumber report.
+     *
+     * <p>This method reads the `cucumber-report.json` file for the specified run ID
+     * and identifies scenarios that failed. It constructs a list of paths with line
+     * numbers for rerunning the failed scenarios.</p>
+     *
+     * @param runId The unique identifier of the test run.
+     * @return A list of strings representing the paths and line numbers of failed scenarios.
+     */
+    public List<String> extractFailedScenarioPathsWithLineNumbers(String report_base_path, String runId) {
+        List<String> rerunList = new ArrayList<>();
+        ObjectMapper mapper = new ObjectMapper();
+        Path cucumberJsonPath = Path.of(report_base_path, runId, "cucumber-reports.json");
+
+        try {
+            JsonNode root = mapper.readTree(cucumberJsonPath.toFile());
+            for (JsonNode feature : root) {
+                String uri = feature.get("uri").asText();
+                for (JsonNode element : feature.get("elements")) {
+                    if (element.get("type").asText().equals("scenario")) {
+                        boolean hasFailure = false;
+                        for (JsonNode step : element.get("steps")) {
+                            String result = step.get("result").get("status").asText();
+                            if ("failed".equals(result)) {
+                                hasFailure = true;
+                                break;
+                            }
+                        }
+                        if (hasFailure) {
+                            int line = element.get("line").asInt();
+                            // Construct path relative to your test resources
+                            rerunList.add(uri + ":" + line);
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading cucumber report: " + e.getMessage());
+        }
+
+        return rerunList;
     }
 }

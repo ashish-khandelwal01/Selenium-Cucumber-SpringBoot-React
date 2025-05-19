@@ -43,7 +43,9 @@ public class DBUtil {
      * @param baseClass The BaseClass for logging errors.
      */
     @Autowired
-    public DBUtil(@Qualifier("mysqlJdbcTemplate") JdbcTemplate jdbcTemplate, BaseClass baseClass) {
+    // Add @Qualifier annotation to specify the bean name
+   // public DBUtil(@Qualifier("mysqlJdbcTemplate") JdbcTemplate jdbcTemplate, BaseClass baseClass) {
+    public DBUtil(JdbcTemplate jdbcTemplate, BaseClass baseClass) {
         this.jdbcTemplate = jdbcTemplate;
         this.baseClass = baseClass;
     }

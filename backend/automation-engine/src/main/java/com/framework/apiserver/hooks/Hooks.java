@@ -1,10 +1,21 @@
 package com.framework.apiserver.hooks;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.utilities.BaseClass;
+import com.framework.apiserver.utilities.CommonUtils;
 import com.framework.apiserver.utilities.DriverManager;
 import com.framework.apiserver.utilities.SeleniumTestBase;
 import io.cucumber.java.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
+
+import java.io.File;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * Hooks class provides Cucumber hooks for managing test execution lifecycle.
@@ -17,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  *   <li>@Before: Executes before each scenario to set up preconditions.</li>
  *   <li>@After: Executes after each scenario to clean up resources.</li>
  *   <li>@AfterStep: Executes after each step to perform additional actions like capturing screenshots.</li>
+ *   <li>@AfterAll: Executes after all scenarios to process test run information.</li>
  *   <li>@Autowired: Injects Spring-managed dependencies.</li>
  * </ul>
  *
@@ -30,6 +42,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @see DriverManager
  * @see SeleniumTestBase
  */
+@Component
+@RequiredArgsConstructor
 public class Hooks {
 
     private final DriverManager driverManager;
@@ -40,15 +54,11 @@ public class Hooks {
     @Autowired
     private SeleniumTestBase seleniumTestBase;
 
-    /**
-     * Constructs a Hooks instance with the required DriverManager dependency.
-     *
-     * @param driverManager The DriverManager instance responsible for managing the WebDriver.
-     */
     @Autowired
-    public Hooks(DriverManager driverManager) {
-        this.driverManager = driverManager;
-    }
+    private CommonUtils commonUtils;
+
+    private final TestRunInfoService testRunInfoService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Executes before each scenario to set up preconditions.
@@ -83,6 +93,49 @@ public class Hooks {
             }
         } catch (Exception e) {
             baseClass.failLog("Unable to capture screenshot: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Executes after all scenarios to process test run information.
+     *
+     * <p>Reads the `run-info.json` file from the most recent report folder,
+     * parses its content, and saves the test run information to the database.</p>
+     */
+    @AfterAll
+    public void afterAll() {
+        String reportsDir = "reports";
+        // Look for most recently created run folder (optional logic)
+        File latestRunDir = new File(commonUtils.getMostRecentReportFolder(reportsDir));
+
+        File runInfoFile = new File(latestRunDir, "run-info.json");
+        if (!runInfoFile.exists()) {
+            System.err.println("run-info.json not found in " + latestRunDir.getName());
+            return;
+        }
+        try {
+            JsonNode node = objectMapper.readTree(runInfoFile);
+            TestRunInfoEntity runInfo = new TestRunInfoEntity();
+
+            runInfo.setRunId(node.path("runId").asText());
+            runInfo.setStartTime(LocalDateTime.parse(node.path("startTime").asText()));
+            runInfo.setEndTime(LocalDateTime.parse(node.path("endTime").asText()));
+            runInfo.setDurationSeconds(node.path("durationSeconds").asInt());
+            runInfo.setTotal(node.path("total").asInt());
+            runInfo.setPassed(node.path("passed").asInt());
+            runInfo.setFailed(node.path("failed").asInt());
+            runInfo.setStatus(node.path("status").asText());
+
+            // Parse the "failures" array if it exists
+            List<String> failures = commonUtils.extractFailedScenarioPathsWithLineNumbers(reportsDir, node.path("runId").asText());
+            runInfo.setFailureScenarios(failures);
+
+            testRunInfoService.save(runInfo);
+
+            System.out.println("✅ run-info.json imported to DB successfully.");
+
+        } catch (Exception e) {
+            System.err.println("❌ Failed to parse or insert run-info.json into DB.");
         }
     }
 }
