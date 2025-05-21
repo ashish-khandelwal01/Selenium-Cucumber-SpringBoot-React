@@ -12,6 +12,8 @@ export type TestRun = {
   triggeredBy: string;
   durationSeconds: number;
   startTime: string;
+  passed: number;
+  failed: number;
 };
 
 export type PieChartData = {

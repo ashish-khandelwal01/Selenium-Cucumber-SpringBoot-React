@@ -60,6 +60,16 @@ const Dashboard = () => {
     return (totalDuration / runsReportList.length).toFixed(2);
   }, [runsReportList]);
 
+  const failedToday = useMemo(() => {
+    if (!runsReportList || runsReportList.length === 0) return 0;
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return runsReportList.filter((run) => {
+      const runDate = new Date(run.startTime);
+      console.log('Run Date:', run.status);
+      return runDate >= todayStart && run.status.includes('Failures');
+    }).length;
+  }, [runsReportList]);
   return (
     <main className="flex-1 p-6 space-y-6 overflow-auto">
       <div className="grid grid-cols-4 gap-4">
@@ -74,7 +84,7 @@ const Dashboard = () => {
           <CardContent className="p-4">
             Failures Today
             <br />
-            <span className="text-2xl font-bold">3</span>
+            <span className="text-2xl font-bold">{failedToday}</span>
           </CardContent>
         </Card>
         <Card>
@@ -98,7 +108,7 @@ const Dashboard = () => {
       <div className="flex gap-4">
         <Card className="w-[70%]">
           <CardContent className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Test Results (Last 7 Days)</h3>
+            <h3 className="text-lg font-semibold mb-2">Test Results (This Week)</h3>
             {loading_testResults ? (
               <p>Loading chart...</p>
             ) : error_testResults ? (
