@@ -1,0 +1,50 @@
+import type { TestRun } from '../types/TestRun';
+import type { BackendStatus } from '../types/TestRun';
+import { Button } from './ui/button';
+import { formatDuration } from '../utils/RunCardUtil';
+
+type UIStatus = 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING';
+
+const mapBackendStatusToUIStatus = (status: BackendStatus): UIStatus => {
+  if (status === 'Execution Successful' || status === 'Rerun Successful') return 'PASSED';
+  if (status === 'Execution Completed with Failures' || status === 'Rerun Completed with Failures') return 'FAILED';
+  if (status === 'RUNNING') return 'RUNNING';
+  if (status === 'CANCELLED') return 'CANCELLED';
+  return 'FAILED';
+};
+
+const statusTextColor = {
+  RUNNING: 'text-blue-600',
+  PASSED: 'text-green-600',
+  FAILED: 'text-red-600',
+  CANCELLED: 'text-gray-600',
+  PENDING: 'text-yellow-600',
+};
+
+type TestRunCardProps = TestRun;
+
+const TestRunCard = ({
+  runId,
+  status,
+  triggeredBy,
+  durationSeconds,
+  startTime,
+}: TestRunCardProps) => {
+  const uiStatus = mapBackendStatusToUIStatus(status);
+  const formattedDuration = formatDuration(durationSeconds);
+
+  return (
+    <tr className="border-t border-gray-200 text-sm">
+      <td className="py-2">{runId}</td>
+      <td className={`py-2 font-medium ${statusTextColor[uiStatus]}`}>{uiStatus}</td>
+      <td className="py-2">{triggeredBy}</td>
+      <td className="py-2">{formattedDuration}</td>
+      <td className="py-2">{startTime}</td>
+      <td className="py-2">
+        <Button size="sm">View</Button>
+      </td>
+    </tr>
+  );
+};
+
+export default TestRunCard;
