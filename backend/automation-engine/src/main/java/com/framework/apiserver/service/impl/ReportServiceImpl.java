@@ -84,11 +84,8 @@ public class ReportServiceImpl implements ReportService {
      *
      * @return A list of `ReportMetaData` objects representing the available test reports.
      */
-    public List<ReportMetaData> listAllReports() {
-        List<TestRunInfoEntity> entities = testRunInfoRepository.findAll();
-        return entities.stream()
-                .map(entity -> modelMapper.map(entity, ReportMetaData.class))
-                .collect(Collectors.toList());
+    public List<TestRunInfoEntity> listAllReports() {
+        return testRunInfoRepository.findAll();
     }
 
     /**

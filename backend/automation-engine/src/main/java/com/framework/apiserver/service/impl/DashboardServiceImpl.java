@@ -1,5 +1,6 @@
 package com.framework.apiserver.service.impl;
 
+import com.framework.apiserver.dto.dashboard.DailyTestSummary;
 import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.DashboardService;
@@ -13,9 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import com.framework.apiserver.dto.dashboard.WeeklySummaryResponse;
 import com.framework.apiserver.dto.dashboard.PassFailPieResponse;
@@ -35,20 +34,55 @@ public class DashboardServiceImpl implements DashboardService {
     /**
      * Retrieves a summary of test runs for the current week.
      *
-     * @return A WeeklySummaryResponse object containing the total runs, passed runs, and failed runs.
+     * <p>This method performs the following steps:</p>
+     * <ul>
+     *   <li>Determines the start of the current week (Monday).</li>
+     *   <li>Fetches all test runs that started after the beginning of the week.</li>
+     *   <li>Groups the test runs by their start date.</li>
+     *   <li>Calculates the total passed and failed tests for each day of the week.</li>
+     *   <li>Aggregates the daily summaries into a list and computes the weekly totals.</li>
+     * </ul>
+     *
+     * @return A {@link WeeklySummaryResponse} object containing:
+     *         <ul>
+     *           <li>A list of daily test summaries for the current week.</li>
+     *           <li>The total number of passed tests for the week.</li>
+     *           <li>The total number of failed tests for the week.</li>
+     *         </ul>
      */
     public WeeklySummaryResponse getWeeklySummary() {
         LocalDate startOfWeek = LocalDate.now().with(DayOfWeek.MONDAY);
         LocalDateTime weekStartDateTime = startOfWeek.atStartOfDay();
 
+        // Get all test runs from this week
         List<TestRunInfoEntity> runs = repository.findByStartTimeAfter(weekStartDateTime);
 
-        int totalRuns = runs.size();
-        int totalPassed = runs.stream().mapToInt(TestRunInfoEntity::getPassed).sum();
-        int totalFailed = runs.stream().mapToInt(TestRunInfoEntity::getFailed).sum();
+        // Group by date
+        Map<LocalDate, List<TestRunInfoEntity>> groupedByDate = runs.stream()
+                .collect(Collectors.groupingBy(run -> run.getStartTime().toLocalDate()));
 
-        return new WeeklySummaryResponse(totalRuns, totalPassed, totalFailed);
+        List<DailyTestSummary> dailySummaries = new ArrayList<>();
+        int totalPassed = 0;
+        int totalFailed = 0;
+
+        for (LocalDate date = startOfWeek; !date.isAfter(startOfWeek.plusDays(6)); date = date.plusDays(1)) {
+            List<TestRunInfoEntity> dailyRuns = groupedByDate.getOrDefault(date, Collections.emptyList());
+
+            int passed = dailyRuns.stream().mapToInt(TestRunInfoEntity::getPassed).sum();
+            int failed = dailyRuns.stream().mapToInt(TestRunInfoEntity::getFailed).sum();
+
+            totalPassed += passed;
+            totalFailed += failed;
+
+            dailySummaries.add(new DailyTestSummary(date, passed, failed));
+            if(date.isEqual(LocalDate.now())) {
+                break;
+            }
+        }
+
+        return new WeeklySummaryResponse(dailySummaries, totalPassed, totalFailed);
     }
+
 
     /**
      * Retrieves pass/fail statistics for all test runs.

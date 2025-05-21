@@ -3,6 +3,7 @@ package com.framework.apiserver.service.impl;
 import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
+import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.testrunner.TestRunner;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
@@ -39,6 +41,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
 
     @Autowired
     private AsyncJobManager asyncJobManager;
+
+    @Autowired
+    private TestRunInfoService testRunInfoService;
 
     /**
      * Executes Cucumber tests filtered by the specified tag.
@@ -69,30 +74,16 @@ public class TestExecutionServiceImpl implements TestExecutionService {
                     ? "Execution Successful"
                     : "Execution Completed with Failures: " + failureCount;
 
-            RunInfo runInfo = new RunInfo();
-            runInfo.setRunId(runId);
-            runInfo.setTags(tag);
-            runInfo.setStartTime(startTime);
-            runInfo.setEndTime(endTime);
-            runInfo.setDurationSeconds(durationSeconds);
-            runInfo.setTotal(total);
-            runInfo.setPassed(passed);
-            runInfo.setFailed(failureCount);
-            runInfo.setStatus(status);
-
-            String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
-            if (latestReportFolder != null) {
-                commonUtils.moveReportToRunIdFolder(latestReportFolder, runId);
-                commonUtils.moveCucumberReportsToRunIdFolder(runId);
-                commonUtils.writeRunInfo(runInfo);
-                commonUtils.zipReportFolder(runId);
-            }
+            commonUtils.createRunInfoFileAndDb(testRunInfoService, tag, runId, startTime, endTime,
+                    durationSeconds, total, passed, failureCount, status);
 
             return new TestExecutionResponse(status, failureCount, runId);
         } catch (Exception e) {
             return new TestExecutionResponse("Execution Failed: " + e.getMessage(), -1, null);
         }
     }
+
+
 
     /**
      * Executes Cucumber tests asynchronously based on the specified tag and job ID.

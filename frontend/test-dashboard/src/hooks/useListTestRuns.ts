@@ -1,17 +1,17 @@
 import { useState, useCallback,useEffect } from 'react';
-import { getLatestRuns } from '../api/dashboard';
-import type { TestRun } from '../types/TestRun';
+import { listReports } from '../api/reportApi.js';
+import type { ListReports } from '../types/TestRun';
 
-export const useTestRuns = () => {
-  const [runs, setRuns] = useState<TestRun[]>([]);
+export const useListReports = () => {
+  const [runs, setRuns] = useState<ListReports[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLatestRuns = useCallback(async () => {
+  const fetchRunList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getLatestRuns();
+      const res = await listReports();
       setRuns(res.data);
     } catch (err) {
       setError(err+'Failed to load test runs.');
@@ -21,9 +21,9 @@ export const useTestRuns = () => {
   }, []);
   
   useEffect(() => {
-    fetchLatestRuns();
-  }, [fetchLatestRuns]);
+    fetchRunList();
+  }, [fetchRunList]);
 
 
-  return { runs, loading, error, fetchLatestRuns };
+  return { runs, loading, error, fetchRunList };
 };

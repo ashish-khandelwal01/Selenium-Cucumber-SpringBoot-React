@@ -18,6 +18,7 @@ public class TestRunInfoEntity {
     private Long id;
 
     private String runId;
+    private String tags;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 

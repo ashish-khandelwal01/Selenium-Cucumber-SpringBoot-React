@@ -20,6 +20,16 @@ const BASE_URL = 'http://localhost:8080/api/dashboard'; // or your deployed Spri
 export const getAllRuns = () => 
     axios.get(`${BASE_URL}/runs`);
 
+
+/**
+ * Fetches all test runs from the dashboard API with Pagination.
+ *
+ * @function getAllRuns
+ * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing all runs.
+ */
+export const getAllRunsByPages = () => 
+    axios.get(`${BASE_URL}/runs/pages`);
+
 /**
  * Fetches the latest test runs from the dashboard API.
  *

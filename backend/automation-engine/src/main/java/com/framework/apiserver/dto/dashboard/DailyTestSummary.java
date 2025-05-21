@@ -4,13 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class WeeklySummaryResponse {
-    private List<DailyTestSummary> dailySummaries;
-    private int totalPassed;
-    private int totalFailed;
+public class DailyTestSummary {
+    private LocalDate date;
+    private int passed;
+    private int failed;
 }

@@ -99,49 +99,4 @@ public class Hooks {
         }
     }
 
-    /**
-     * Executes after all scenarios to process test run information.
-     *
-     * <p>Reads the `run-info.json` file from the most recent report folder,
-     * parses its content, and saves the test run information to the database.</p>
-     */
-    @AfterAll
-    public static void afterAll() {
-        String reportsDir = "reports";
-        // Look for most recently created run folder (optional logic)
-        TestRunInfoService testRunInfoService = SpringContext.getBean(TestRunInfoService.class);
-        CommonUtils commonUtils = SpringContext.getBean(CommonUtils.class);
-
-        File latestRunDir = new File(commonUtils.getMostRecentReportFolder(reportsDir));
-
-        File runInfoFile = new File(latestRunDir, "run-info.json");
-        if (!runInfoFile.exists()) {
-            System.err.println("run-info.json not found in " + latestRunDir.getName());
-            return;
-        }
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode node = objectMapper.readTree(runInfoFile);
-            TestRunInfoEntity runInfo = new TestRunInfoEntity();
-
-            runInfo.setRunId(node.path("runId").asText());
-            runInfo.setStartTime(LocalDateTime.parse(node.path("Start Time").asText()));
-            runInfo.setEndTime(LocalDateTime.parse(node.path("End Time").asText()));
-            runInfo.setDurationSeconds(node.path("Duration in Seconds").asInt());
-            runInfo.setTotal(node.path("Total").asInt());
-            runInfo.setPassed(node.path("Passed").asInt());
-            runInfo.setFailed(node.path("Failed").asInt());
-            runInfo.setStatus(node.path("status").asText());
-
-            // Parse the "failures" array if it exists
-            List<String> failures = commonUtils.extractFailedScenarioPathsWithLineNumbers(reportsDir, node.path("runId").asText());
-            runInfo.setFailureScenarios(failures);
-            testRunInfoService.save(runInfo);
-
-            System.out.println("✅ run-info.json imported to DB successfully.");
-
-        } catch (Exception e) {
-            System.err.println("❌ Failed to parse or insert run-info.json into DB.");
-        }
-    }
 }

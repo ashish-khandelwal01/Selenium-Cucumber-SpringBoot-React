@@ -1,6 +1,7 @@
 package com.framework.apiserver.controller;
 
 import com.framework.apiserver.dto.ReportMetaData;
+import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -54,7 +55,7 @@ public class ReportController {
      */
     @Operation(summary = "List all report metadata")
     @GetMapping("/list")
-    public ResponseEntity<List<ReportMetaData>> listReports() {
+    public ResponseEntity<List<TestRunInfoEntity>> listReports() {
         return ResponseEntity.ok(reportService.listAllReports());
     }
 

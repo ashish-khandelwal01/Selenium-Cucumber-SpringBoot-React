@@ -17,5 +17,4 @@ public class RunInfo {
     private int total;
     private int passed;
     private int failed;
-
 }

@@ -1,7 +1,7 @@
 import type { TestRun } from '../types/TestRun';
 import type { BackendStatus } from '../types/TestRun';
 import { Button } from './ui/button';
-import { formatDuration } from '../utils/RunCardUtil';
+import { formatDuration, formatDate } from '../utils/RunCardUtil';
 
 type UIStatus = 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING';
 
@@ -32,6 +32,7 @@ const TestRunCard = ({
 }: TestRunCardProps) => {
   const uiStatus = mapBackendStatusToUIStatus(status);
   const formattedDuration = formatDuration(durationSeconds);
+  const formattedStartTime = formatDate(startTime);
 
   return (
     <tr className="border-t border-gray-200 text-sm">
@@ -39,7 +40,7 @@ const TestRunCard = ({
       <td className={`py-2 font-medium ${statusTextColor[uiStatus]}`}>{uiStatus}</td>
       <td className="py-2">{triggeredBy}</td>
       <td className="py-2">{formattedDuration}</td>
-      <td className="py-2">{startTime}</td>
+      <td className="py-2">{formattedStartTime}</td>
       <td className="py-2">
         <Button size="sm">View</Button>
       </td>

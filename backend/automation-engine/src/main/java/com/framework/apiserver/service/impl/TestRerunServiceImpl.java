@@ -113,25 +113,8 @@ public class TestRerunServiceImpl implements TestRerunService {
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
             System.out.println("Test execution completed with " + failureCount + " failures.");
-
-            RunInfo runInfo = new RunInfo();
-            runInfo.setRunId(newRunId);
-            runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
-            runInfo.setStartTime(startTime);
-            runInfo.setEndTime(endTime);
-            runInfo.setDurationSeconds(durationSeconds);
-            runInfo.setTotal(total);
-            runInfo.setPassed(passed);
-            runInfo.setFailed(failureCount);
-            runInfo.setStatus(status);
-
-            String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
-            if (latestReportFolder != null) {
-                commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
-                commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
-                commonUtils.writeRunInfo(runInfo);
-                commonUtils.zipReportFolder(newRunId);
-            }
+            commonUtils.createRunInfoFileAndDb(testRunInfoService,"Rerun", newRunId, startTime, endTime,
+                    durationSeconds, total, passed, failureCount, status);
 
             return new TestExecutionResponse(status, failureCount, newRunId);
 
@@ -210,24 +193,9 @@ public class TestRerunServiceImpl implements TestRerunService {
                 long durationSeconds = Duration.between(startTime, endTime).getSeconds();
                 System.out.println("Test execution completed with " + failureCount + " failures.");
 
-                RunInfo runInfo = new RunInfo();
-                runInfo.setRunId(newRunId);
-                runInfo.setTags(String.valueOf(failedScenarioPathsWithLines));
-                runInfo.setStartTime(startTime);
-                runInfo.setEndTime(endTime);
-                runInfo.setDurationSeconds(durationSeconds);
-                runInfo.setTotal(total);
-                runInfo.setPassed(passed);
-                runInfo.setFailed(failureCount);
-                runInfo.setStatus(status);
+                commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", newRunId, startTime,
+                        endTime, durationSeconds, total, passed, failureCount, status);
 
-                String latestReportFolder = commonUtils.getMostRecentReportFolder(".");
-                if (latestReportFolder != null) {
-                    commonUtils.moveReportToRunIdFolder(latestReportFolder, newRunId);
-                    commonUtils.moveCucumberReportsToRunIdFolder(newRunId);
-                    commonUtils.writeRunInfo(runInfo);
-                    commonUtils.zipReportFolder(newRunId);
-                }
                 asyncJobManager.completeJob(jobId, new TestExecutionResponse(status, failureCount, newRunId));
             } catch (Exception e) {
                 asyncJobManager.failJob(jobId);

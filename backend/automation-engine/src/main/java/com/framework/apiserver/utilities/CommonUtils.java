@@ -2,7 +2,10 @@ package com.framework.apiserver.utilities;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.framework.apiserver.config.SpringContext;
 import com.framework.apiserver.dto.RunInfo;
+import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.service.TestRunInfoService;
 import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -386,5 +389,75 @@ public class CommonUtils {
         }
 
         return rerunList;
+    }
+
+    /**
+     * Creates a run information file and saves it to the database.
+     *
+     * <p>This method performs the following steps:</p>
+     * <ul>
+     *   <li>Creates and populates a `RunInfo` object and a `TestRunInfoEntity` object with the provided parameters.</li>
+     *   <li>Extracts failed scenario paths from the cucumber report and associates them with the `TestRunInfoEntity` object.</li>
+     *   <li>Saves the `TestRunInfoEntity` object to the database using the `TestRunInfoService`.</li>
+     *   <li>Moves the most recent report folder to a directory named after the run ID.</li>
+     *   <li>Moves cucumber report files to the run ID folder.</li>
+     *   <li>Writes the run information to a JSON file in the run ID folder.</li>
+     *   <li>Compresses the run ID folder into a zip file.</li>
+     * </ul>
+     *
+     * <p>If any exception occurs during the process, it logs an error message.</p>
+     *
+     * @param testRunInfoService The service used to save the run information to the database.
+     * @param tag The tag associated with the test run.
+     * @param runId The unique identifier for the test run.
+     * @param startTime The start time of the test run.
+     * @param endTime The end time of the test run.
+     * @param durationSeconds The duration of the test run in seconds.
+     * @param total The total number of tests executed.
+     * @param passed The number of tests that passed.
+     * @param failureCount The number of tests that failed.
+     * @param status The status of the test run (e.g., "Passed", "Failed").
+     * @throws IOException If an I/O error occurs during file operations.
+     */
+    public void createRunInfoFileAndDb(TestRunInfoService testRunInfoService, String tag, String runId,
+                                       LocalDateTime startTime, LocalDateTime endTime, long durationSeconds, int total,
+                                       int passed, int failureCount, String status) throws IOException {
+        try {
+            TestRunInfoEntity runInfoDb = new TestRunInfoEntity();
+            String reportsDir = "reports";
+            RunInfo runInfo = new RunInfo();
+            runInfo.setRunId(runId);
+            runInfoDb.setRunId(runId);
+            runInfo.setTags(tag);
+            runInfoDb.setTags(tag);
+            runInfo.setStartTime(startTime);
+            runInfoDb.setStartTime(startTime);
+            runInfo.setEndTime(endTime);
+            runInfoDb.setEndTime(endTime);
+            runInfo.setDurationSeconds(durationSeconds);
+            runInfoDb.setDurationSeconds(Integer.parseInt(String.valueOf(durationSeconds)));
+            runInfo.setTotal(total);
+            runInfoDb.setTotal(total);
+            runInfo.setPassed(passed);
+            runInfoDb.setPassed(passed);
+            runInfo.setFailed(failureCount);
+            runInfoDb.setFailed(failureCount);
+            runInfo.setStatus(status);
+            runInfoDb.setStatus(status);
+            List<String> failures = extractFailedScenarioPathsWithLineNumbers(reportsDir, runId);
+            runInfoDb.setFailureScenarios(failures);
+            testRunInfoService.save(runInfoDb);
+
+            String latestReportFolder = getMostRecentReportFolder(".");
+            if (latestReportFolder != null) {
+                moveReportToRunIdFolder(latestReportFolder, runId);
+                moveCucumberReportsToRunIdFolder(runId);
+                writeRunInfo(runInfo);
+                zipReportFolder(runId);
+            }
+            System.out.println("✅ run-info.json imported to DB successfully.");
+        }catch(Exception e){
+            System.err.println("❌ Failed to parse or insert run-info.json into DB.");
+        }
     }
 }
