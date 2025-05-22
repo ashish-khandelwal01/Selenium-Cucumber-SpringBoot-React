@@ -39,7 +39,7 @@ const Navbar = () => {
             }
             style={({ isActive }) =>
               isActive
-                ? { backgroundColor: '#2563eb', color: '#fff' } // blue-600 bg, white text
+                ? { backgroundColor: '#2563eb', color: '#fff' } 
                 : {}
             }
           >
@@ -49,7 +49,7 @@ const Navbar = () => {
       </aside>
 
       <main className="flex-1 p-6 space-y-6 overflow-auto">
-        <Outlet /> {/* This is where nested routes render */}
+        <Outlet />
       </main>
     </div>
     </div>

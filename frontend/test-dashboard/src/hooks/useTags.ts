@@ -1,24 +1,29 @@
-import { useState, useCallback } from 'react';
-import { getLatestRuns } from '../api/dashboard';
-import type { TestRun } from '../types/TestRun';
+import { useCallback, useEffect, useState } from 'react';
+import { getTags as fetchTagsApi } from '../api/tagApi.js';
 
-export const useTestRuns = () => {
-  const [runs, setRuns] = useState<TestRun[]>([]);
-  const [loading, setLoading] = useState(false);
+export const useTags = () => {
+  const [tags, setTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLatestRuns = useCallback(async () => {
+  const fetchTags = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getLatestRuns();
-      setRuns(res.data);
+      const res = await fetchTagsApi();
+      setTags(res.data);
     } catch (err) {
-      setError(err+'Failed to load test runs.');
+      setError('Failed to load tags.');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { runs, loading, error, fetchLatestRuns };
+  // Automatically fetch tags on mount
+  useEffect(() => {
+    fetchTags();
+  }, [fetchTags]);
+
+  return { tags, loading, error, refreshTags: fetchTags };
 };

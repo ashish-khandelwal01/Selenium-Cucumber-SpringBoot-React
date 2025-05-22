@@ -59,9 +59,6 @@ public class Hooks {
 
     @Autowired
     private CommonUtils commonUtils;
-    @Autowired
-    private static TestRunInfoService testRunInfoService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Executes before each scenario to set up preconditions.

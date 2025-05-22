@@ -444,10 +444,6 @@ public class CommonUtils {
             runInfoDb.setFailed(failureCount);
             runInfo.setStatus(status);
             runInfoDb.setStatus(status);
-            List<String> failures = extractFailedScenarioPathsWithLineNumbers(reportsDir, runId);
-            runInfoDb.setFailureScenarios(failures);
-            testRunInfoService.save(runInfoDb);
-
             String latestReportFolder = getMostRecentReportFolder(".");
             if (latestReportFolder != null) {
                 moveReportToRunIdFolder(latestReportFolder, runId);
@@ -455,6 +451,9 @@ public class CommonUtils {
                 writeRunInfo(runInfo);
                 zipReportFolder(runId);
             }
+            List<String> failures = extractFailedScenarioPathsWithLineNumbers(reportsDir, runId);
+            runInfoDb.setFailureScenarios(failures);
+            testRunInfoService.save(runInfoDb);
             System.out.println("✅ run-info.json imported to DB successfully.");
         }catch(Exception e){
             System.err.println("❌ Failed to parse or insert run-info.json into DB.");
