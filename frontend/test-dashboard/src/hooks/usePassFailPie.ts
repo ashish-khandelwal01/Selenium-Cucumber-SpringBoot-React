@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getStats } from '../api/dashboard';
+import { getStats } from '../api/dashboardApi';
 import type { PieChartData } from '../types/TestRun';
 
 export const usePassFailPie = () => {

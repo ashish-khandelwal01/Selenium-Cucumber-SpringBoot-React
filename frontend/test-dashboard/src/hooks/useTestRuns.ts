@@ -1,5 +1,5 @@
 import { useState, useCallback,useEffect } from 'react';
-import { getLatestRuns } from '../api/dashboard';
+import { getLatestRuns } from '../api/dashboardApi';
 import type { TestRun } from '../types/TestRun';
 
 export const useTestRuns = () => {

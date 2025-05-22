@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getWeeklySummary } from '../api/dashboard';
+import { getWeeklySummary } from '../api/dashboardApi';
 import type { DailySummary, WeeklySummary } from '../types/TestRun';
 
 export const useTestResults = () => {

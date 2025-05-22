@@ -27,8 +27,15 @@ export const getAllRuns = () =>
  * @function getAllRuns
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing all runs.
  */
-export const getAllRunsByPages = () => 
-    axios.get(`${BASE_URL}/runs/pages`);
+export const getAllRunsByPages = ({ page, size, startDate, endDate }) => {
+  return axios.get(`${BASE_URL}/runs/pages`, {
+    params: {
+      page,
+      size,
+    },
+  });
+};
+
 
 /**
  * Fetches the latest test runs from the dashboard API.
