@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -100,23 +101,15 @@ public class TestRerunServiceImpl implements TestRerunService {
             LocalDateTime startTime = LocalDateTime.now();
             Path rerunFilePath = Paths.get("target/rerun.txt");
             Files.write(rerunFilePath, failedScenarioPathsWithLines);
-            Result result = JUnitCore.runClasses(TestFailedRunner.class);
+            CommonUtils.testCaseRun(null, newRunId);
             commonUtils.deleteFile(rerunFilePath.toString());
-            int failureCount = result.getFailureCount();
-            int total = result.getRunCount();
-            int passed = total - failureCount;
-
-            String status = failureCount == 0
-                    ? "Rerun Successful"
-                    : "Rerun Completed with Failures: " + failureCount;
-
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
-            System.out.println("Test execution completed with " + failureCount + " failures.");
-            commonUtils.createRunInfoFileAndDb(testRunInfoService,"Rerun", newRunId, startTime, endTime,
-                    durationSeconds, total, passed, failureCount, status);
+            HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", runId, startTime, endTime,
+                    durationSeconds);
 
-            return new TestExecutionResponse(status, failureCount, newRunId);
+            return new TestExecutionResponse(String.valueOf(result.get("status")),
+                    (Integer) result.get("failureCount"), runId);
 
         } catch (Exception e) {
             return new TestExecutionResponse("Rerun Failed: " + e.getMessage(), -1,null);
@@ -179,24 +172,17 @@ public class TestRerunServiceImpl implements TestRerunService {
                 LocalDateTime startTime = LocalDateTime.now();
                 Path rerunFilePath = Paths.get("target/rerun.txt");
                 Files.write(rerunFilePath, failedScenarioPathsWithLines);
-                Result result = JUnitCore.runClasses(TestFailedRunner.class);
+                CommonUtils.testCaseRun(null, newRunId);
                 commonUtils.deleteFile(rerunFilePath.toString());
-                int failureCount = result.getFailureCount();
-                int total = result.getRunCount();
-                int passed = total - failureCount;
-
-                String status = failureCount == 0
-                        ? "Rerun Successful"
-                        : "Rerun Completed with Failures: " + failureCount;
 
                 LocalDateTime endTime = LocalDateTime.now();
                 long durationSeconds = Duration.between(startTime, endTime).getSeconds();
-                System.out.println("Test execution completed with " + failureCount + " failures.");
 
-                commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", newRunId, startTime,
-                        endTime, durationSeconds, total, passed, failureCount, status);
+                HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", runId, startTime, endTime,
+                        durationSeconds);
 
-                asyncJobManager.completeJob(jobId, new TestExecutionResponse(status, failureCount, newRunId));
+                asyncJobManager.completeJob(jobId, new TestExecutionResponse(String.valueOf(result.get("status")),
+                        (Integer) result.get("failureCount"), newRunId));
             } catch (Exception e) {
                 asyncJobManager.failJob(jobId);
             }

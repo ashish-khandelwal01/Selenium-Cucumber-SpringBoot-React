@@ -1,21 +1,17 @@
 package com.framework.apiserver.service.impl;
 
-import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.testrunner.TestRunner;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 
 /**
  * Implementation of the TestExecutionService interface.
@@ -56,33 +52,24 @@ public class TestExecutionServiceImpl implements TestExecutionService {
      *         the number of test failures, and the run ID.
      */
     public TestExecutionResponse runCucumberTests(String tag) {
+        String runId = CommonUtils.generateRunId();
+        System.out.println("Run ID: " + runId);
+        LocalDateTime startTime = LocalDateTime.now();
         try {
-            String runId = CommonUtils.generateRunId();
-            System.out.println("Run ID: " + runId);
-
-            System.setProperty("run.id", runId);
-            System.setProperty("cucumber.filter.tags", tag);
-            LocalDateTime startTime = LocalDateTime.now();
-            Result result = JUnitCore.runClasses(TestRunner.class);
+            // Command to launch a new JVM process
+            CommonUtils.testCaseRun(tag, runId);
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
-            int failureCount = result.getFailureCount();
-            int total = result.getRunCount();
-            int passed = total - failureCount;
-            System.out.println("Test execution completed with " + failureCount + " failures.");
-            String status = failureCount == 0
-                    ? "Execution Successful"
-                    : "Execution Completed with Failures: " + failureCount;
 
-            commonUtils.createRunInfoFileAndDb(testRunInfoService, tag, runId, startTime, endTime,
-                    durationSeconds, total, passed, failureCount, status);
+            HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, tag, runId, startTime, endTime,
+                    durationSeconds);
 
-            return new TestExecutionResponse(status, failureCount, runId);
+            return new TestExecutionResponse(String.valueOf(result.get("status")),
+                    (Integer) result.get("failureCount"), runId);
         } catch (Exception e) {
             return new TestExecutionResponse("Execution Failed: " + e.getMessage(), -1, null);
         }
     }
-
 
 
     /**

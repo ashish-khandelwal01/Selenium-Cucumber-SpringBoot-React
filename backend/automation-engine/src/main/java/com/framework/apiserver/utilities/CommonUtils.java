@@ -64,7 +64,46 @@ public class CommonUtils {
     @Autowired
     private BaseClass baseClass;
 
-       /**
+    /**
+     * Executes a test case run using JUnitCore with the specified tag and run ID.
+     *
+     * <p>This method constructs a command to execute a test run with the following steps:</p>
+     * <ul>
+     *   <li>Sets the `run.id` and `cucumber.filter.tags` system properties.</li>
+     *   <li>Specifies the current classpath for the Java process.</li>
+     *   <li>Uses `JUnitCore` to run the `TestRunner` class.</li>
+     *   <li>Starts the process and waits for it to complete.</li>
+     * </ul>
+     *
+     * <p>The method inherits the I/O of the current process to display logs in the console.</p>
+     *
+     * @param tag The tag to filter test cases to be executed.
+     * @param runId The unique identifier for the test run.
+     * @throws IOException If an I/O error occurs during process execution.
+     * @throws InterruptedException If the current thread is interrupted while waiting for the process to complete.
+     */
+    public static void testCaseRun(String tag, String runId) throws IOException, InterruptedException {
+        List<String> command = new ArrayList<>();
+        command.add("java");
+        command.add("-Drun.id=" + runId);
+        if(tag != null && !tag.isEmpty()) {
+            command.add("-Dcucumber.filter.tags=" + tag);
+        }
+        command.add("-cp");
+        command.add(System.getProperty("java.class.path")); // current classpath
+        command.add("org.junit.runner.JUnitCore");
+        if(tag != null && !tag.isEmpty()) {
+            command.add("com.framework.apiserver.testrunner.TestRunner");
+        }else{
+            command.add("com.framework.apiserver.testrunner.TestFailedRunner");
+        }
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.inheritIO(); // to show logs in console
+        Process process = processBuilder.start();
+        int exitCode = process.waitFor();
+    }
+
+    /**
      * Returns the current date and time formatted according to the specified format.
      *
      * @param format The date-time format string.
@@ -413,16 +452,24 @@ public class CommonUtils {
      * @param startTime The start time of the test run.
      * @param endTime The end time of the test run.
      * @param durationSeconds The duration of the test run in seconds.
-     * @param total The total number of tests executed.
-     * @param passed The number of tests that passed.
-     * @param failureCount The number of tests that failed.
-     * @param status The status of the test run (e.g., "Passed", "Failed").
      * @throws IOException If an I/O error occurs during file operations.
      */
-    public void createRunInfoFileAndDb(TestRunInfoService testRunInfoService, String tag, String runId,
-                                       LocalDateTime startTime, LocalDateTime endTime, long durationSeconds, int total,
-                                       int passed, int failureCount, String status) throws IOException {
+    public HashMap<String, Object> createRunInfoFileAndDb(TestRunInfoService testRunInfoService, String tag, String runId,
+                                       LocalDateTime startTime, LocalDateTime endTime, long durationSeconds){
         try {
+            HashMap<String, Object> result = new HashMap<>();
+            HashMap<String, Integer> results = readCucumberJsonForResults();
+            int failureCount = results.get("failed");
+            int total = results.get("total");
+            int passed = total - failureCount;
+            System.out.println("Test execution completed with " + failureCount + " failures.");
+            String status = failureCount == 0
+                    ? "Execution Successful"
+                    : "Execution Completed with Failures: " + failureCount;
+            result.put("status", status);
+            result.put("failureCount", failureCount);
+            result.put("passed", passed);
+            result.put("total", total);
             TestRunInfoEntity runInfoDb = new TestRunInfoEntity();
             String reportsDir = "reports";
             RunInfo runInfo = new RunInfo();
@@ -455,8 +502,64 @@ public class CommonUtils {
             runInfoDb.setFailureScenarios(failures);
             testRunInfoService.save(runInfoDb);
             System.out.println("✅ run-info.json imported to DB successfully.");
+            return result;
         }catch(Exception e){
             System.err.println("❌ Failed to parse or insert run-info.json into DB.");
         }
+        return null;
+    }
+
+    /**
+     * Reads the Cucumber JSON report and extracts the total and failed scenario counts.
+     *
+     * <p>This method processes the `cucumber-reports.json` file located in the `target` directory
+     * to calculate the total number of scenarios and the number of failed scenarios. It iterates
+     * through the features, scenarios, and steps in the JSON structure to determine the status
+     * of each scenario.</p>
+     *
+     * @return A {@link HashMap} containing:
+     *         <ul>
+     *           <li>`total` - The total number of scenarios.</li>
+     *           <li>`failed` - The number of failed scenarios.</li>
+     *         </ul>
+     *         Returns `null` if an error occurs while reading the JSON file.
+     */
+
+    public HashMap<String, Integer> readCucumberJsonForResults(){
+        HashMap<String, Integer> result = new HashMap<>();
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(new File("target/cucumber-reports.json"));
+            // Process the JSON data as needed
+            int totalScenarios = 0;
+            int failedScenarios = 0;
+
+            for (JsonNode feature : rootNode) {
+                JsonNode elements = feature.get("elements");
+                if (elements != null) {
+                    for (JsonNode scenario : elements) {
+                        totalScenarios++;
+                        boolean hasFailed = false;
+
+                        for (JsonNode step : scenario.get("steps")) {
+                            String status = step.get("result").get("status").asText();
+                            if ("failed".equalsIgnoreCase(status)) {
+                                hasFailed = true;
+                            }
+                        }
+
+                        if (hasFailed) {
+                            failedScenarios++;
+                        }
+                    }
+                }
+            }
+            result.put("total", totalScenarios);
+            result.put("failed", failedScenarios);
+            return result;
+        } catch (IOException e) {
+            System.err.println("Error reading JSON file: " + e.getMessage());
+        }
+        return null;
     }
 }

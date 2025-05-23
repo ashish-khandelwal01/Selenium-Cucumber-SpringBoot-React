@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useTestRunHistory } from "@/hooks/useTestRunHistory";
+import { formatDuration } from "@/utils/RunCardUtil";
 
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
-  const [selectedScenarios, setSelectedScenarios] = useState<string[] | null>(null);
+  const [selectedRun, setSelectedRun] = useState<any | null>(null); // Replace `any` with your `Run` type if available
 
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
 
@@ -72,10 +73,8 @@ export default function TestRunHistoryPage() {
                 <tr key={run.runId} className="hover:bg-gray-700 transition">
                   <td className="px-6 py-4 border-b">{run.runId}</td>
                   <td className="px-6 py-4 border-b">{run.tags?.length ? run.tags : "—"}</td>
-                  <td className="px-6 py-4 border-b">
-                    {new Date(run.startTime).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 border-b">{run.durationSeconds}</td>
+                  <td className="px-6 py-4 border-b">{new Date(run.startTime).toLocaleString()}</td>
+                  <td className="px-6 py-4 border-b">{formatDuration(run.durationSeconds)}</td>
                   <td className="px-6 py-4 border-b">{run.total}</td>
                   <td className="px-6 py-4 border-b">{run.passed}</td>
                   <td className="px-6 py-4 border-b">{run.failed}</td>
@@ -95,7 +94,7 @@ export default function TestRunHistoryPage() {
                   <td className="px-6 py-4 border-b">
                     {run.failureScenarios?.length ? (
                       <button
-                        onClick={() => setSelectedScenarios(run.failureScenarios)}
+                        onClick={() => setSelectedRun(run)}
                         className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
                       >
                         View ({run.failureScenarios.length})
@@ -133,24 +132,39 @@ export default function TestRunHistoryPage() {
       </div>
 
       {/* Modal for Failed Scenarios */}
-      {selectedScenarios && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-            <h2 className="text-lg font-semibold text-white mb-4">Failed Scenarios</h2>
-            <ul className="list-disc list-inside space-y-2 text-gray-200 text-sm">
-              {selectedScenarios.map((scenario, idx) => (
-                <li key={idx}>{scenario}</li>
-              ))}
-            </ul>
+        {selectedRun && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+            <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[700px] max-w-full p-8 pt-12 relative animate-fade-in">
             <button
-              onClick={() => setSelectedScenarios(null)}
-              className="mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded"
+                onClick={() => setSelectedRun(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
             >
-              Close
+                ✖
             </button>
-          </div>
+            <h2 className="text-xl font-semibold mb-6 text-center border-b border-gray-700 pb-3">
+                Failed Scenarios for Run ID:{" "}
+                <span className="text-yellow-300">{selectedRun.runId}</span>
+            </h2>
+
+            {selectedRun.failureScenarios?.length > 0 ? (
+                <ul className="space-y-3 max-h-[400px] overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                {selectedRun.failureScenarios.map((scenario: string, index: number) => (
+                    <li
+                    key={index}
+                    className="flex items-start gap-2 bg-gray-700 p-3 rounded-lg shadow-sm hover:bg-gray-600"
+                    >
+                    <span className="text-red-400">❌</span>
+                    <span>{scenario}</span>
+                    </li>
+                ))}
+                </ul>
+            ) : (
+                <p className="text-gray-400">No failed scenarios found.</p>
+            )}
+            </div>
         </div>
-      )}
+        )}
+
     </div>
   );
 }
