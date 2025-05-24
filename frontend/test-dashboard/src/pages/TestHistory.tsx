@@ -5,7 +5,7 @@ import { formatDuration } from "@/utils/RunCardUtil";
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
-  const [selectedRun, setSelectedRun] = useState<any | null>(null); // Replace `any` with your `Run` type if available
+  const [selectedRun, setSelectedRun] = useState<any | null>(null);
 
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
 

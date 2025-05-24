@@ -5,6 +5,7 @@ import { usePassFailPie } from '../hooks/usePassFailPie';
 import { useTestResults } from '../hooks/useTestResults';
 import { useListReports } from '../hooks/useListTestRuns';
 import TestRunCard from './TestRunCard';
+import { formatDuration } from "@/utils/RunCardUtil";
 import {
   PieChart,
   Pie,
@@ -99,7 +100,7 @@ const Dashboard = () => {
             Average Execution Time
             <br />
             <span className="text-2xl font-bold">
-              {averageExecutionTime} sec
+              {formatDuration(Number(averageExecutionTime))}
             </span>
           </CardContent>
         </Card>

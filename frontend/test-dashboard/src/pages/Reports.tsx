@@ -6,7 +6,6 @@ import handleView from "@/components/HandleView";
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
-  const [selectedRun, setSelectedRun] = useState<any | null>(null); // Replace `any` with your `Run` type if available
 
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
 
@@ -98,7 +97,7 @@ export default function TestRunHistoryPage() {
                         onClick={() => handleView(run.runId)}
                         className="text-blue-400 hover:underline"
                         >
-                        Download
+                        View
                         </button>
                     
                   </td>
