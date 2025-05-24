@@ -2,7 +2,6 @@ package com.framework.apiserver.utilities;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.framework.apiserver.config.SpringContext;
 import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.service.TestRunInfoService;
@@ -10,22 +9,23 @@ import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -77,28 +77,30 @@ public class CommonUtils {
      *
      * <p>The method inherits the I/O of the current process to display logs in the console.</p>
      *
-     * @param tag The tag to filter test cases to be executed.
-     * @param runId The unique identifier for the test run.
-     * @throws IOException If an I/O error occurs during process execution.
+     * @param tag         The tag to filter test cases to be executed.
+     * @param runId       The unique identifier for the test run.
+     * @param failedReport  the path of the failed report file.
+     * @throws IOException          If an I/O error occurs during process execution.
      * @throws InterruptedException If the current thread is interrupted while waiting for the process to complete.
      */
-    public static void testCaseRun(String tag, String runId) throws IOException, InterruptedException {
+    public static void testCaseRun(String tag, String runId, Path failedReport) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add("java");
         command.add("-Drun.id=" + runId);
         if(tag != null && !tag.isEmpty()) {
             command.add("-Dcucumber.filter.tags=" + tag);
+        }else{
+            command.add("-Dcucumber.feature.path=" + failedReport.toAbsolutePath());
         }
         command.add("-cp");
         command.add(System.getProperty("java.class.path")); // current classpath
-        command.add("org.junit.runner.JUnitCore");
         if(tag != null && !tag.isEmpty()) {
             command.add("com.framework.apiserver.testrunner.TestRunner");
         }else{
             command.add("com.framework.apiserver.testrunner.TestFailedRunner");
         }
         ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.inheritIO(); // to show logs in console
+        processBuilder.inheritIO();
         Process process = processBuilder.start();
         int exitCode = process.waitFor();
     }
@@ -269,17 +271,40 @@ public class CommonUtils {
      * the one with the most recent modification timestamp.</p>
      *
      * @param baseDirPath The path of the base directory to search.
+     * @param runId       The unique identifier for the run.
      * @return The absolute path of the most recently modified folder, or null if no subdirectories exist.
      */
-    public String getMostRecentReportFolder(String baseDirPath) {
-        File baseDir = new File(baseDirPath);
-        File[] subDirs = baseDir.listFiles(file -> file.isDirectory() && !file.getName().equals("target"));
-        if (subDirs == null || subDirs.length == 0) return null;
+    public String getReportFolderWithRunId(String baseDirPath, String runId) {
+        if (runId == null || runId.isEmpty()) {
+            System.err.println("System property 'run.id' is not set.");
+            return null;
+        }
 
-        return Arrays.stream(subDirs)
-                .max(Comparator.comparingLong(File::lastModified))
-                .map(File::getAbsolutePath)
-                .orElse(null);
+        try (Stream<Path> pathStream = Files.walk(Paths.get(baseDirPath))) {
+            Optional<Path> matchedPath = pathStream
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".html"))
+                    .filter(path -> path.getParent().toString().contains("Reports"))
+                    .filter(path -> {
+                        try {
+                            String html = Files.readString(path);
+                            Document doc = Jsoup.parse(html);
+                            String text = doc.text();
+                            return text.contains(runId);
+                        } catch (IOException e) {
+                            System.err.println("Error processing file: " + path + " - " + e.getMessage());
+                            return false;
+                        }
+                    })
+                    .map(path -> path.getParent()) // get the folder where the match was found
+                    .findFirst();
+
+            return matchedPath.map(Path::toString).orElse(null);
+
+        } catch (IOException e) {
+            System.err.println("Error walking the file tree: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -293,8 +318,10 @@ public class CommonUtils {
      * @throws IOException If an I/O error occurs during the move operation.
      */
     public void moveReportToRunIdFolder(String sourceDir, String runId) throws IOException {
-        Path dest = Paths.get("reports", runId);
-        FileUtils.moveDirectory(new File(sourceDir), dest.toFile());
+        File source = new File(sourceDir);
+        Path dest = Paths.get("reports", runId, source.getName());
+        FileUtils.moveDirectory(source, dest.toFile());
+        deleteDirectory(source.getParent());
     }
 
     /**
@@ -458,7 +485,7 @@ public class CommonUtils {
                                        LocalDateTime startTime, LocalDateTime endTime, long durationSeconds){
         try {
             HashMap<String, Object> result = new HashMap<>();
-            HashMap<String, Integer> results = readCucumberJsonForResults();
+            HashMap<String, Integer> results = readCucumberJsonForResults(runId);
             int failureCount = results.get("failed");
             int total = results.get("total");
             int passed = total - failureCount;
@@ -491,10 +518,9 @@ public class CommonUtils {
             runInfoDb.setFailed(failureCount);
             runInfo.setStatus(status);
             runInfoDb.setStatus(status);
-            String latestReportFolder = getMostRecentReportFolder(".");
+            String latestReportFolder = getReportFolderWithRunId(".", runId);
             if (latestReportFolder != null) {
                 moveReportToRunIdFolder(latestReportFolder, runId);
-                moveCucumberReportsToRunIdFolder(runId);
                 writeRunInfo(runInfo);
                 zipReportFolder(runId);
             }
@@ -525,11 +551,11 @@ public class CommonUtils {
      *         Returns `null` if an error occurs while reading the JSON file.
      */
 
-    public HashMap<String, Integer> readCucumberJsonForResults(){
+    public HashMap<String, Integer> readCucumberJsonForResults(String runId){
         HashMap<String, Integer> result = new HashMap<>();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(new File("target/cucumber-reports.json"));
+            JsonNode rootNode = objectMapper.readTree(new File("reports/"+runId+"/cucumber-reports.json"));
             // Process the JSON data as needed
             int totalScenarios = 0;
             int failedScenarios = 0;

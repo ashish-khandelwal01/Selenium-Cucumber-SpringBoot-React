@@ -1,49 +1,56 @@
 package com.framework.apiserver.testrunner;
 
-import io.cucumber.junit.Cucumber;
-import io.cucumber.junit.CucumberOptions;
-import org.junit.runner.RunWith;
+import io.cucumber.core.cli.Main;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * TestRunner is the entry point for executing Cucumber tests.
+ * The TestRunner class is responsible for executing Cucumber tests.
  *
- * <p>This class is annotated with @RunWith to specify that it uses the Cucumber test runner.
- * The @CucumberOptions annotation is used to configure various aspects of the test execution,
- * such as the location of feature files, step definitions, and reporting plugins.</p>
- *
- * <p>Annotations:</p>
- * <ul>
- *   <li>@RunWith: Specifies the test runner to use (Cucumber in this case).</li>
- *   <li>@CucumberOptions: Configures Cucumber-specific options for test execution.</li>
- * </ul>
- *
- * <p>Configuration:</p>
- * <ul>
- *   <li>features: Path to the directory containing Cucumber feature files.</li>
- *   <li>glue: Packages containing step definitions and hooks.</li>
- *   <li>plugin: Plugins for generating reports (e.g., HTML, JSON, ExtentReports).</li>
- *   <li>monochrome: Ensures clean and readable console output.</li>
- *   <li>tags: Filters scenarios to execute based on tags.</li>
- * </ul>
- *
- * <p>Usage:</p>
- * <ul>
- *   <li>Run this class as a JUnit test to execute the Cucumber scenarios.</li>
- *   <li>Ensure the feature files and step definitions are correctly configured.</li>
- * </ul>
+ * <p>This class constructs the necessary Cucumber options, including feature file paths,
+ * glue code locations, and reporting plugins. It also supports dynamically passing
+ * tags for filtering test scenarios.</p>
  */
-@RunWith(Cucumber.class)
-@CucumberOptions(
-		features = "src/test/resources/features",        // Path to your feature files
-		glue = {"com.framework.apiserver.stepDefinitions", "com.framework.apiserver.hooks"}, // Path to your step definitions and hooks
-		plugin = {
-				"pretty",                                    // Standard console output
-				"html:target/cucumber-reports.html",          // HTML report output
-				"json:target/cucumber-reports.json",          // JSON for CI tools integration
-				"com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:"  // ExtentReports integration
-		},
-		monochrome = true,                              // Clean and readable console output
-		tags = "@Test"                                  // Filter scenarios by tag
-)
 public class TestRunner {
+
+	/**
+	 * The main method serves as the entry point for running Cucumber tests.
+	 *
+	 * <p>It performs the following steps:</p>
+	 * <ul>
+	 *   <li>Retrieves the `run.id` system property to uniquely identify the test run.</li>
+	 *   <li>Constructs a list of Cucumber options, including feature file paths, glue code,
+	 *       and reporting plugins.</li>
+	 *   <li>Optionally adds a tag filter if the `cucumber.filter.tags` system property is set.</li>
+	 *   <li>Invokes the Cucumber `Main.run` method to execute the tests with the specified options.</li>
+	 * </ul>
+	 *
+	 * @param args Command-line arguments (not used in this implementation).
+	 */
+	public static void main(String[] args) {
+		// Retrieve the run ID from system properties
+		String runId = System.getProperty("run.id");
+
+		// Initialize Cucumber options
+		List<String> cucumberOptions = new ArrayList<>(List.of(
+				"src/test/resources/features", // Path to feature files
+				"--glue", "com.framework.apiserver.stepDefinitions", // Step definitions package
+				"--glue", "com.framework.apiserver.hooks", // Hooks package
+				"--plugin", "pretty", // Pretty console output
+				"--plugin", "html:reports/" + runId + "/cucumber-reports.html", // HTML report
+				"--plugin", "json:reports/" + runId + "/cucumber-reports.json", // JSON report
+				"--plugin", "com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:", // Extent report
+				"--monochrome" // Disable colored output for better readability
+		));
+
+		// Optionally add tag filtering if specified
+		String tag = System.getProperty("cucumber.filter.tags");
+		if (tag != null && !tag.isEmpty()) {
+			cucumberOptions.add("--tags");
+			cucumberOptions.add(tag);
+		}
+
+		// Run Cucumber with the specified options
+		Main.run(cucumberOptions.toArray(new String[0]), Thread.currentThread().getContextClassLoader());
+	}
 }

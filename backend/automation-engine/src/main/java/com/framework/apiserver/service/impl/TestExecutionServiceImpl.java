@@ -9,6 +9,7 @@ import com.framework.apiserver.utilities.CommonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -57,7 +58,7 @@ public class TestExecutionServiceImpl implements TestExecutionService {
         LocalDateTime startTime = LocalDateTime.now();
         try {
             // Command to launch a new JVM process
-            CommonUtils.testCaseRun(tag, runId);
+            CommonUtils.testCaseRun(tag, runId, Path.of("."));
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
 

@@ -159,7 +159,12 @@
 			<artifactId>mongodb-driver-sync</artifactId>
 			<version>4.10.2</version>
 		</dependency>
-
+		<!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.20.1</version>
+		</dependency>
 		<!-- Oracle DB -->
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>

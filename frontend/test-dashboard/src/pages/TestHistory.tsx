@@ -5,7 +5,8 @@ import { formatDuration } from "@/utils/RunCardUtil";
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
-  const [selectedRun, setSelectedRun] = useState<any | null>(null);
+  const [selectedRunForRerun, setSelectedRunForRerun] = useState<any | null>(null);
+  const [selectedRunForFailures, setSelectedRunForFailures] = useState<any | null>(null);
 
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
 
@@ -70,9 +71,13 @@ export default function TestRunHistoryPage() {
             </thead>
             <tbody>
               {runs.map((run) => (
-                <tr key={run.runId} className="hover:bg-gray-700 transition">
-                  <td className="px-6 py-4 border-b">{run.runId}</td>
-                  <td className="px-6 py-4 border-b">{run.tags?.length ? run.tags : "—"}</td>
+                <tr
+                  key={run.runId}
+                  className="hover:bg-gray-700 transition cursor-pointer"
+                  onClick={() => setSelectedRunForRerun(run)}
+                >
+                  <td className="px-6 py-4 border-b font-mono text-yellow-300">{run.runId}</td>
+                  <td className="px-6 py-4 border-b">{run.tags?.length ? run.tags: "—"}</td>
                   <td className="px-6 py-4 border-b">{new Date(run.startTime).toLocaleString()}</td>
                   <td className="px-6 py-4 border-b">{formatDuration(run.durationSeconds)}</td>
                   <td className="px-6 py-4 border-b">{run.total}</td>
@@ -94,7 +99,10 @@ export default function TestRunHistoryPage() {
                   <td className="px-6 py-4 border-b">
                     {run.failureScenarios?.length ? (
                       <button
-                        onClick={() => setSelectedRun(run)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRunForFailures(run);
+                        }}
                         className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
                       >
                         View ({run.failureScenarios.length})
@@ -131,40 +139,74 @@ export default function TestRunHistoryPage() {
         </button>
       </div>
 
-      {/* Modal for Failed Scenarios */}
-        {selectedRun && (
+      {/* Rerun Modal */}
+      {selectedRunForRerun && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-            <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[700px] max-w-full p-8 pt-12 relative animate-fade-in">
+          <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[600px] max-w-full p-8 pt-12 relative">
             <button
-                onClick={() => setSelectedRun(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
+              onClick={() => setSelectedRunForRerun(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
             >
-                ✖
+              ✖
+            </button>
+            <h2 className="text-2xl font-semibold mb-4 text-center">Rerun Test</h2>
+            <p className="mb-6 text-center text-gray-300">
+              Are you sure you want to rerun test run{" "}
+              <span className="text-yellow-300 font-mono">{selectedRunForRerun.runId}</span>?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => {
+                  // TODO: call rerun API from your api file here
+                  setSelectedRunForRerun(null);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              >
+                Rerun
+              </button>
+              <button
+                onClick={() => setSelectedRunForRerun(null)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Failed Scenarios Modal */}
+      {selectedRunForFailures && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[700px] max-w-full p-8 pt-12 relative animate-fade-in">
+            <button
+              onClick={() => setSelectedRunForFailures(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
+            >
+              ✖
             </button>
             <h2 className="text-xl font-semibold mb-6 text-center border-b border-gray-700 pb-3">
-                Failed Scenarios for Run ID:{" "}
-                <span className="text-yellow-300">{selectedRun.runId}</span>
+              Failed Scenarios for Run ID:{" "}
+              <span className="text-yellow-300">{selectedRunForFailures.runId}</span>
             </h2>
-
-            {selectedRun.failureScenarios?.length > 0 ? (
-                <ul className="space-y-3 max-h-[400px] overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                {selectedRun.failureScenarios.map((scenario: string, index: number) => (
-                    <li
+            {selectedRunForFailures.failureScenarios?.length > 0 ? (
+              <ul className="space-y-3 max-h-[400px] overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                {selectedRunForFailures.failureScenarios.map((scenario: string, index: number) => (
+                  <li
                     key={index}
                     className="flex items-start gap-2 bg-gray-700 p-3 rounded-lg shadow-sm hover:bg-gray-600"
-                    >
+                  >
                     <span className="text-red-400">❌</span>
                     <span>{scenario}</span>
-                    </li>
+                  </li>
                 ))}
-                </ul>
+              </ul>
             ) : (
-                <p className="text-gray-400">No failed scenarios found.</p>
+              <p className="text-gray-400 text-center">No failed scenarios.</p>
             )}
-            </div>
+          </div>
         </div>
-        )}
-
+      )}
     </div>
   );
 }

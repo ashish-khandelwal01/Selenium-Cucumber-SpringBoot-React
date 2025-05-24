@@ -68,6 +68,7 @@ public class Hooks {
     @Before
     public void beforeHook(Scenario scenario) {
         baseClass.setScenario(scenario);
+        baseClass.infoLog("Run ID: " + System.getProperty("run.id"));
     }
 
     /**

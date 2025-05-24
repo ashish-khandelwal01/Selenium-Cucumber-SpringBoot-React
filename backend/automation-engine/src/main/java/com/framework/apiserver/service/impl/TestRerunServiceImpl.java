@@ -2,29 +2,22 @@ package com.framework.apiserver.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.framework.apiserver.dto.RunInfo;
 import com.framework.apiserver.dto.TestExecutionResponse;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRerunService;
 import com.framework.apiserver.service.TestRunInfoService;
-import com.framework.apiserver.testrunner.TestFailedRunner;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -96,20 +89,18 @@ public class TestRerunServiceImpl implements TestRerunService {
 
         try {
             String newRunId = CommonUtils.generateRunId();
-            System.setProperty("run.id", newRunId);
-
             LocalDateTime startTime = LocalDateTime.now();
-            Path rerunFilePath = Paths.get("target/rerun.txt");
+            Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
             Files.write(rerunFilePath, failedScenarioPathsWithLines);
-            CommonUtils.testCaseRun(null, newRunId);
+            CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
             commonUtils.deleteFile(rerunFilePath.toString());
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
-            HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", runId, startTime, endTime,
+            HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", newRunId, startTime, endTime,
                     durationSeconds);
 
             return new TestExecutionResponse(String.valueOf(result.get("status")),
-                    (Integer) result.get("failureCount"), runId);
+                    (Integer) result.get("failureCount"), newRunId);
 
         } catch (Exception e) {
             return new TestExecutionResponse("Rerun Failed: " + e.getMessage(), -1,null);
@@ -170,15 +161,15 @@ public class TestRerunServiceImpl implements TestRerunService {
                 System.setProperty("run.id", newRunId);
 
                 LocalDateTime startTime = LocalDateTime.now();
-                Path rerunFilePath = Paths.get("target/rerun.txt");
+                Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
                 Files.write(rerunFilePath, failedScenarioPathsWithLines);
-                CommonUtils.testCaseRun(null, newRunId);
+                CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
                 commonUtils.deleteFile(rerunFilePath.toString());
 
                 LocalDateTime endTime = LocalDateTime.now();
                 long durationSeconds = Duration.between(startTime, endTime).getSeconds();
 
-                HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", runId, startTime, endTime,
+                HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", newRunId, startTime, endTime,
                         durationSeconds);
 
                 asyncJobManager.completeJob(jobId, new TestExecutionResponse(String.valueOf(result.get("status")),
