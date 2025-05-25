@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTestRunHistory } from "@/hooks/useTestRunHistory";
 import { formatDuration } from "@/utils/RunCardUtil";
 import { rerunTests } from "../api/testRerunApi";
@@ -12,7 +12,18 @@ export default function TestRunHistoryPage() {
   const [isAsync, setIsAsync] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // New state for user feedback messages
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
+
+  // Auto-hide message after 4 seconds
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
 
   const handleRerun = async () => {
     if (!selectedRunForRerun) return;
@@ -20,14 +31,14 @@ export default function TestRunHistoryPage() {
     try {
       if (isAsync) {
         await rerunAsync(selectedRunForRerun.runId);
-        alert(`✅ Async rerun for run ${selectedRunForRerun.runId} triggered.`);
+        setMessage({ type: "success", text: `✅ Async rerun for run ${selectedRunForRerun.runId} triggered.` });
       } else {
         await rerunTests(selectedRunForRerun.runId);
-        alert(`✅ Sync rerun for run ${selectedRunForRerun.runId} triggered.`);
+        setMessage({ type: "success", text: `✅ Sync rerun for run ${selectedRunForRerun.runId} triggered.` });
       }
     } catch (error) {
       console.error("Rerun failed:", error);
-      alert("❌ Failed to trigger rerun.");
+      setMessage({ type: "error", text: "❌ Failed to trigger rerun." });
     } finally {
       setIsLoading(false);
       setSelectedRunForRerun(null);
@@ -38,6 +49,18 @@ export default function TestRunHistoryPage() {
   return (
     <div className="p-6 bg-gray-900 min-h-screen text-gray-100 relative">
       <h1 className="text-3xl font-bold mb-6">Test Run History</h1>
+
+      {/* Feedback Message */}
+      {message && (
+        <div
+          className={`fixed top-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded shadow-lg font-semibold max-w-lg w-full text-center z-50 ${
+            message.type === "success" ? "bg-green-700 text-green-100" : "bg-red-700 text-red-100"
+          }`}
+          role="alert"
+        >
+          {message.text}
+        </div>
+      )}
 
       {/* Controls */}
       <div className="mb-6 flex flex-wrap gap-4">
@@ -196,13 +219,14 @@ export default function TestRunHistoryPage() {
                 checked={isAsync}
                 onChange={() => setIsAsync(!isAsync)}
                 className="form-checkbox text-blue-500 h-4 w-4"
+                disabled={isLoading}
               />
               <label htmlFor="async-checkbox" className="text-sm text-gray-300">
                 Run asynchronously?
               </label>
             </div>
 
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center gap-4 relative">
               <button
                 onClick={handleRerun}
                 disabled={isLoading}
@@ -220,6 +244,32 @@ export default function TestRunHistoryPage() {
               >
                 Cancel
               </button>
+
+              {/* Loading spinner overlay */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-xl">
+                  <svg
+                    className="animate-spin h-8 w-8 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    ></path>
+                  </svg>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -227,32 +277,28 @@ export default function TestRunHistoryPage() {
 
       {/* Failed Scenarios Modal */}
       {selectedRunForFailures && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-          <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[700px] max-w-full p-8 pt-12 relative animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+          <div className="bg-gray-800 text-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto p-8 pt-12 relative">
             <button
               onClick={() => setSelectedRunForFailures(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
             >
               ✖
             </button>
-            <h2 className="text-xl font-semibold mb-6 text-center border-b border-gray-700 pb-3">
-              Failed Scenarios for Run ID:{" "}
-              <span className="text-yellow-300">{selectedRunForFailures.runId}</span>
+            <h2 className="text-2xl font-semibold mb-4 text-center">
+              Failed Scenarios for Run {selectedRunForFailures.runId}
             </h2>
-            {selectedRunForFailures.failureScenarios?.length > 0 ? (
-              <ul className="space-y-3 max-h-[400px] overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                {selectedRunForFailures.failureScenarios.map((scenario: string, index: number) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-2 bg-gray-700 p-3 rounded-lg shadow-sm hover:bg-gray-600"
-                  >
-                    <span className="text-red-400">❌</span>
-                    <span>{scenario}</span>
+
+            {selectedRunForFailures.failureScenarios.length ? (
+              <ul className="list-disc pl-6 space-y-2 max-h-[70vh] overflow-auto">
+                {selectedRunForFailures.failureScenarios.map((scen: any, idx: number) => (
+                  <li key={idx} className="text-gray-300">
+                    {scen}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-gray-400 text-center">No failed scenarios.</p>
+              <p className="text-gray-400 text-center">No failed scenarios found.</p>
             )}
           </div>
         </div>
