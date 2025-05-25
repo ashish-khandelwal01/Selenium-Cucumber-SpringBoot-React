@@ -2,14 +2,38 @@ import { useState } from "react";
 import { useTestRunHistory } from "@/hooks/useTestRunHistory";
 import { formatDuration } from "@/utils/RunCardUtil";
 import { rerunTests } from "../api/testRerunApi";
+import { rerunAsync } from "../api/asyncTestApi";
 
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
   const [selectedRunForRerun, setSelectedRunForRerun] = useState<any | null>(null);
   const [selectedRunForFailures, setSelectedRunForFailures] = useState<any | null>(null);
+  const [isAsync, setIsAsync] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { runs, totalPages, loading } = useTestRunHistory(page, size);
+
+  const handleRerun = async () => {
+    if (!selectedRunForRerun) return;
+    setIsLoading(true);
+    try {
+      if (isAsync) {
+        await rerunAsync(selectedRunForRerun.runId);
+        alert(`✅ Async rerun for run ${selectedRunForRerun.runId} triggered.`);
+      } else {
+        await rerunTests(selectedRunForRerun.runId);
+        alert(`✅ Sync rerun for run ${selectedRunForRerun.runId} triggered.`);
+      }
+    } catch (error) {
+      console.error("Rerun failed:", error);
+      alert("❌ Failed to trigger rerun.");
+    } finally {
+      setIsLoading(false);
+      setSelectedRunForRerun(null);
+      setIsAsync(false);
+    }
+  };
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen text-gray-100 relative">
@@ -75,10 +99,16 @@ export default function TestRunHistoryPage() {
                 <tr
                   key={run.runId}
                   className="hover:bg-gray-700 transition cursor-pointer"
-                  onClick={() => setSelectedRunForRerun(run)}
+                  onClick={() => {
+                    if (run.tags?.includes("Rerun")) {
+                      alert("⚠️ Rerun tests cannot be rerun again.");
+                      return;
+                    }
+                    setSelectedRunForRerun(run);
+                  }}
                 >
                   <td className="px-6 py-4 border-b font-mono text-yellow-300">{run.runId}</td>
-                  <td className="px-6 py-4 border-b">{run.tags?.length ? run.tags: "—"}</td>
+                  <td className="px-6 py-4 border-b">{run.tags?.length ? run.tags : "—"}</td>
                   <td className="px-6 py-4 border-b">{new Date(run.startTime).toLocaleString()}</td>
                   <td className="px-6 py-4 border-b">{formatDuration(run.durationSeconds)}</td>
                   <td className="px-6 py-4 border-b">{run.total}</td>
@@ -145,35 +175,47 @@ export default function TestRunHistoryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-gray-800 text-white rounded-xl shadow-2xl w-[600px] max-w-full p-8 pt-12 relative">
             <button
-              onClick={() => setSelectedRunForRerun(null)}
+              onClick={() => {
+                setSelectedRunForRerun(null);
+                setIsAsync(false);
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl"
             >
               ✖
             </button>
-            <h2 className="text-2xl font-semibold mb-4 text-center">Rerun Test</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-center">Rerun Test With Tags</h2>
             <p className="mb-6 text-center text-gray-300">
               Are you sure you want to rerun test run{" "}
               <span className="text-yellow-300 font-mono">{selectedRunForRerun.runId}</span>?
             </p>
+
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <input
+                id="async-checkbox"
+                type="checkbox"
+                checked={isAsync}
+                onChange={() => setIsAsync(!isAsync)}
+                className="form-checkbox text-blue-500 h-4 w-4"
+              />
+              <label htmlFor="async-checkbox" className="text-sm text-gray-300">
+                Run asynchronously?
+              </label>
+            </div>
+
             <div className="flex justify-center gap-4">
               <button
-                onClick={async () => {
-                    try {
-                      await rerunTests(selectedRunForRerun.runId);
-                      alert(`Test run ${selectedRunForRerun.runId} has been triggered for rerun.`);
-                    } catch (error) {
-                      console.error("Rerun failed:", error);
-                      alert("Failed to trigger rerun.");
-                    } finally {
-                      setSelectedRunForRerun(null);
-                    }
-                  }}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                onClick={handleRerun}
+                disabled={isLoading}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded disabled:opacity-50"
               >
-                Rerun
+                {isLoading ? "Rerunning..." : "Rerun"}
               </button>
               <button
-                onClick={() => setSelectedRunForRerun(null)}
+                onClick={() => {
+                  setSelectedRunForRerun(null);
+                  setIsAsync(false);
+                }}
+                disabled={isLoading}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded"
               >
                 Cancel

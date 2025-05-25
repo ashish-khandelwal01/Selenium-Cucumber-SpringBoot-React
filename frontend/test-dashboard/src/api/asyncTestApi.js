@@ -26,24 +26,24 @@ export const runAsync = (tags) =>
  * Sends a POST request to asynchronously rerun tests filtered by the provided tags.
  *
  * @function rerunAsync
- * @param {string|string[]} tags - The tag or array of tags to filter which tests to rerun.
+ * @param {string|string[]} runId - The unique identifier of the test run to rerun.
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the rerun request.
  */
-export const rerunAsync = (tags) => 
+export const rerunAsync = (runId) => 
     axios.post(`${BASE_URL}/async-rerun`, null, {
-        params: { tags },
+        params: { runId },
     });
 
 /**
  * Sends a POST request to asynchronously rerun failed tests filtered by the provided tags.
  *
  * @function rerunFailedAsync
- * @param {string|string[]} tags - A tag or array of tags to filter which failed tests to rerun.
+ * @param {string|string[]} runId - The unique identifier of the test run to rerun.
  * @returns {Promise<import('axios').AxiosResponse>} Axios promise resolving to the server response.
  */
-export const rerunFailedAsync = (tags) => 
+export const rerunFailedAsync = (runId) => 
     axios.post(`${BASE_URL}/async-rerun/failed`, null, {
-        params: { tags },
+        params: { runId },
     });
 
 /**
