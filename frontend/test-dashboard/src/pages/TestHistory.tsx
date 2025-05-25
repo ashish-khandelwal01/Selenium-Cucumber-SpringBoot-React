@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTestRunHistory } from "@/hooks/useTestRunHistory";
 import { formatDuration } from "@/utils/RunCardUtil";
+import { rerunTests } from "../api/testRerunApi";
 
 export default function TestRunHistoryPage() {
   const [page, setPage] = useState(0);
@@ -156,10 +157,17 @@ export default function TestRunHistoryPage() {
             </p>
             <div className="flex justify-center gap-4">
               <button
-                onClick={() => {
-                  // TODO: call rerun API from your api file here
-                  setSelectedRunForRerun(null);
-                }}
+                onClick={async () => {
+                    try {
+                      await rerunTests(selectedRunForRerun.runId);
+                      alert(`Test run ${selectedRunForRerun.runId} has been triggered for rerun.`);
+                    } catch (error) {
+                      console.error("Rerun failed:", error);
+                      alert("Failed to trigger rerun.");
+                    } finally {
+                      setSelectedRunForRerun(null);
+                    }
+                  }}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
               >
                 Rerun

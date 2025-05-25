@@ -1,6 +1,12 @@
 export const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
-  const secs = (seconds % 60).toFixed(2);;
+  const secsRaw = seconds % 60;
+
+  const secs =
+    secsRaw % 1 === 0
+      ? `${Math.floor(secsRaw)}`
+      : secsRaw.toFixed(2);
+
   return `${mins > 0 ? mins + 'm ' : ''}${secs}s`;
 };
 
