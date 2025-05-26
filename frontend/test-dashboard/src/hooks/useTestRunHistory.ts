@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getAllRunsByPages } from "@/api/dashboardApi";
 
 export function useTestRunHistory(page: number, size: number) {
@@ -6,24 +6,23 @@ export function useTestRunHistory(page: number, size: number) {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRuns = async () => {
-      setLoading(true);
-      try {
-        const response = await getAllRunsByPages({ page, size });
-        setRuns(response.data.content || []);
-        setTotalPages(response.data.totalPages || 0);
-      } catch (error) {
-        console.error("Error fetching test runs", error);
-        setRuns([]);
-        setTotalPages(0);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRuns();
+  const fetchRuns = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getAllRunsByPages({ page, size });
+      setRuns(response.data.content || []);
+      setTotalPages(response.data.totalPages || 0);
+    } catch (error) {
+      setRuns([]);
+      setTotalPages(0);
+    } finally {
+      setLoading(false);
+    }
   }, [page, size]);
 
-  return { runs, totalPages, loading };
+  useEffect(() => {
+    fetchRuns();
+  }, [fetchRuns]); 
+
+  return { runs, totalPages, loading, refetch: fetchRuns };
 }
