@@ -153,9 +153,9 @@ For questions or support, please open an issue or contact the maintainer.
 
 Below are screenshots of the React dashboard UI:
 
-![Dashboard Home](screenshot/dashboard.png)
-![Reports](screenshot/reports.png)
-![Test History](screenshot/test_history.png)
-![Run Tests](screenshot/run_tests.png)
+![Dashboard Home](screenshots/dashboard.png)
+![Reports](screenshots/reports.png)
+![Test History](screenshots/test_history.png)
+![Run Tests](screenshots/run_tests.png)
 
 ---
