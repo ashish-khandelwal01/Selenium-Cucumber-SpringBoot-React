@@ -1,4 +1,4 @@
-FROM maven:3.9.6-eclipse-temurin-21
+FROM --platform=linux/amd64 maven:3.9.6-eclipse-temurin-21
 
 # Set working directory
 WORKDIR /app
