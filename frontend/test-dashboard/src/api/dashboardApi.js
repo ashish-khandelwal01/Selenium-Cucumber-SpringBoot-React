@@ -27,7 +27,7 @@ export const getAllRuns = () =>
  * @function getAllRuns
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing all runs.
  */
-export const getAllRunsByPages = ({ page, size, startDate, endDate }) => {
+export const getAllRunsByPages = ({ page, size }) => {
   return axios.get(`${BASE_URL}/runs/pages`, {
     params: {
       page,
