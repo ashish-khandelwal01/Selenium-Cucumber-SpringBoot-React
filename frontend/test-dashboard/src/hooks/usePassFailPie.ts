@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getStats } from '../api/dashboardApi';
+import { getPassFailPie } from '../api/dashboardApi';
 import type { PieChartData } from '../types/TestRun';
 
 export const usePassFailPie = () => {
@@ -12,11 +12,10 @@ export const usePassFailPie = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getStats();
+      const res = await getPassFailPie();
       const raw = res.data; // { passed: number; failed: number }
 
       const total = raw.passed + raw.failed;
-      console.log('ABCTotal runs:', total, 'Passed:', raw.passed, 'Failed:', raw.failed);
       setTotal(total);
       const pieData: PieChartData[] = total > 0 ? [
         { name: 'Passed', value: parseFloat(((raw.passed / total) * 100).toFixed(1)) },

@@ -4,6 +4,7 @@ import { useTestRuns } from '../hooks/useTestRuns';
 import { usePassFailPie } from '../hooks/usePassFailPie';
 import { useTestResults } from '../hooks/useTestResults';
 import { useListReports } from '../hooks/useListTestRuns';
+import { useAllTestRuns } from '../hooks/useAllTestRuns';
 import TestRunCard from './TestRunCard';
 import { formatDuration } from "@/utils/RunCardUtil";
 import {
@@ -21,6 +22,7 @@ import {
 
 const Dashboard = () => {
   const { runs, loading, error, fetchLatestRuns } = useTestRuns();
+  const { total, loading: loadingTotal } = useAllTestRuns();
   const {
     runs: runs_pie,
     loading: loading_pie,
@@ -78,7 +80,7 @@ const Dashboard = () => {
           <CardContent className="p-4">
             Total Runs
             <br />
-            <span className="text-2xl font-bold">{total_pie}</span>
+            <span className="text-2xl font-bold">{total}</span>
           </CardContent>
         </Card>
         <Card>

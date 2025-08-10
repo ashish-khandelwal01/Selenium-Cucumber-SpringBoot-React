@@ -27,7 +27,7 @@ public interface TestRunFailureRepository extends JpaRepository<TestRunInfoEntit
      * @return A list of RunFailures DTOs containing run IDs and their associated scenarios.
      */
     @Query("""
-            SELECT new com.framework.apiserver.dto.RunFailures(tri.runId, scenario)
+            SELECT new com.framework.apiserver.dto.RunFailures(tri.runId, tri.startTime, tri.tags, scenario)
             FROM TestRunInfoEntity tri
             JOIN tri.failureScenarios scenario
             ORDER BY tri.startTime DESC
@@ -55,25 +55,12 @@ public interface TestRunFailureRepository extends JpaRepository<TestRunInfoEntit
      * @return A list of RunFailures DTOs containing run IDs and their associated scenarios.
      */
     @Query("""
-    SELECT new com.framework.apiserver.dto.RunFailures(tri.runId, scenario)
+    SELECT new com.framework.apiserver.dto.RunFailures(tri.runId, tri.startTime, tri.tags, scenario)
     FROM TestRunInfoEntity tri
     JOIN tri.failureScenarios scenario
     WHERE tri.runId IN :runIds
+    ORDER BY tri.startTime DESC
     """)
     List<RunFailures> findFailuresByRunIds(@Param("runIds") List<String> runIds);
-
-    /**
-     * Retrieves raw failure data (run ID and scenario) for a given list of run IDs.
-     *
-     * @param runIds A list of run IDs to filter the results.
-     * @return A list of Object arrays where each array contains a run ID and a scenario.
-     */
-    @Query("""
-    SELECT tri.runId, scenario
-    FROM TestRunInfoEntity tri
-    JOIN tri.failureScenarios scenario
-    WHERE tri.runId IN :runIds
-    """)
-    List<Object[]> testFailuresByRunIds(@Param("runIds") List<String> runIds);
 
 }

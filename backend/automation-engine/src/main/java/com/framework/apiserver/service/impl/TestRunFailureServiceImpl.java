@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,16 +69,31 @@ public class TestRunFailureServiceImpl implements TestRunFailureService {
 
         // Step 4: Fetch a flat list of RunFailures DTOs for the run IDs
         List<RunFailures> flatFailures = testRunFailureRepository.findFailuresByRunIds(runIds);
-
         // Step 5: Group the scenarios by run ID and map them to GroupRunFailures objects
-        List<GroupRunFailures> grouped = flatFailures.stream()
+        Map<String, List<RunFailures>> groupedByRunId = flatFailures.stream()
                 .collect(Collectors.groupingBy(
                         RunFailures::getRunId,
                         LinkedHashMap::new,
-                        Collectors.mapping(RunFailures::getScenario, Collectors.toList())
-                ))
-                .entrySet().stream()
-                .map(entry -> new GroupRunFailures(entry.getKey(), entry.getValue()))
+                        Collectors.toList()
+                ));
+
+        List<GroupRunFailures> grouped = groupedByRunId.entrySet().stream()
+                .map(entry -> {
+                    String runId = entry.getKey();
+                    List<RunFailures> failures = entry.getValue();
+
+                    // Get the first failure to extract common fields (startTime, tags)
+                    RunFailures firstFailure = failures.get(0);
+                    LocalDateTime startTime = firstFailure.getStartTime();
+                    String tags = firstFailure.getTags();
+
+                    // Extract all scenarios for this runId
+                    List<String> scenarios = failures.stream()
+                            .map(RunFailures::getScenario)
+                            .toList();
+
+                    return new GroupRunFailures(runId, startTime, tags, scenarios);
+                })
                 .toList();
 
         // Step 6: Return a page containing the grouped failures

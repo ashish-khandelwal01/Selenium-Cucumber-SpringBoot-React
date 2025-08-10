@@ -8,7 +8,8 @@ export default function FailedTestRunHistoryPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
 
-  const { failures, totalPages, loading, refetch } = useFailureHistoryRuns(page, size);
+  const { failures, totalPages, loading, refetch 
+  } = useFailureHistoryRuns(page, size);
 
   const {
     autoRefresh,
@@ -152,6 +153,8 @@ export default function FailedTestRunHistoryPage() {
             <thead className="bg-gray-700 text-gray-300 uppercase tracking-wider text-xs">
               <tr>
                 <th className="px-6 py-3 text-left border-b">Run ID</th>
+                <th className="px-6 py-3 text-left border-b">Tags</th>
+                <th className="px-6 py-3 text-left border-b">Start Time</th>
                 <th className="px-6 py-3 text-left border-b">Failed Count</th>
                 <th className="px-6 py-3 text-left border-b">Failed Scenarios</th>
                 <th className="px-6 py-3 text-left border-b">Actions</th>
@@ -276,7 +279,7 @@ export default function FailedTestRunHistoryPage() {
               ✖
             </button>
             <h2 className="text-2xl font-semibold mb-4 text-center">
-              Rerun Test With Tags
+              Rerun Failed Scenarios
             </h2>
             <p className="mb-6 text-center text-gray-300">
               Are you sure you want to rerun failed test run{' '}
