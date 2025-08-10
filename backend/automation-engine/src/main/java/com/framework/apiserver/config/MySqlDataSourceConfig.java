@@ -12,7 +12,7 @@ import javax.sql.DataSource;
 
 /**
  * MySqlDataSourceConfig is a configuration class for setting up the MySQL DataSource
- * and JdbcTemplate beans used in the application.
+ * and JdbcTemplate beans are used in the application.
  *
  * <p>Dependencies:</p>
  * <ul>

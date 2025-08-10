@@ -16,6 +16,7 @@ export const usePassFailPie = () => {
       const raw = res.data; // { passed: number; failed: number }
 
       const total = raw.passed + raw.failed;
+      console.log('ABCTotal runs:', total, 'Passed:', raw.passed, 'Failed:', raw.failed);
       setTotal(total);
       const pieData: PieChartData[] = total > 0 ? [
         { name: 'Passed', value: parseFloat(((raw.passed / total) * 100).toFixed(1)) },
