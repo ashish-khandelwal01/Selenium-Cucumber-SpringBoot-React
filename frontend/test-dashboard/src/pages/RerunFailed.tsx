@@ -44,7 +44,7 @@ export default function FailedTestRunHistoryPage() {
   } = useAsyncJobManager(refetch, handleExternalMessage);
 
   const handleRowClick = useCallback(
-    (run: any) => {
+    (run) => {
       const asyncJob = getAsyncJobForRun(run.runId);
       if (asyncJob) return;
 
@@ -58,7 +58,7 @@ export default function FailedTestRunHistoryPage() {
   );
 
   const handleFailedScenariosClick = useCallback(
-    (e: React.MouseEvent, run: any) => {
+    (e, run) => {
       e.stopPropagation();
       const asyncJob = getAsyncJobForRun(run.runId);
       if (!asyncJob) {
@@ -67,6 +67,21 @@ export default function FailedTestRunHistoryPage() {
     },
     [getAsyncJobForRun, setSelectedRunForFailures]
   );
+
+  const formatStartTime = (startTime) => {
+    if (!startTime) return '—';
+    try {
+      const date = new Date(startTime);
+      return date.toLocaleString();
+    } catch (error) {
+      return startTime;
+    }
+  };
+
+  const formatTags = (tags) => {
+    if (!tags) return '—';
+    return tags;
+  };
 
   return (
     <div className="p-6 bg-gray-900 min-h-screen text-gray-100 relative">
@@ -184,11 +199,32 @@ export default function FailedTestRunHistoryPage() {
                       {run.runId}
                     </td>
                     <td
+                      className={`px-6 py-4 border-b text-gray-300 ${
+                        hasAsyncJob ? 'opacity-50' : ''
+                      }`}
+                    >
+                      {formatTags(run.tags)}
+                    </td>
+                    <td
+                      className={`px-6 py-4 border-b text-gray-300 ${
+                        hasAsyncJob ? 'opacity-50' : ''
+                      }`}
+                    >
+                      {formatStartTime(run.startTime)}
+                    </td>
+                    <td
+                      className={`px-6 py-4 border-b text-center ${
+                        hasAsyncJob ? 'opacity-50' : ''
+                      }`}
+                    >
+                    {run.scenarios?.length || 0}
+                    </td>
+                    <td
                       className={`px-6 py-4 border-b ${
                         hasAsyncJob ? 'opacity-50' : ''
                       }`}
                     >
-                      {run.failureScenarios?.length ? (
+                      {run.scenarios?.length ? (
                         <button
                           onClick={(e) => handleFailedScenariosClick(e, run)}
                           disabled={hasAsyncJob}
@@ -196,7 +232,7 @@ export default function FailedTestRunHistoryPage() {
                             hasAsyncJob ? 'opacity-50 cursor-not-allowed' : ''
                           }`}
                         >
-                          View ({run.failureScenarios.length})
+                          View ({run.scenarios.length})
                         </button>
                       ) : (
                         <span className="text-gray-500 text-xs">—</span>
@@ -368,10 +404,10 @@ export default function FailedTestRunHistoryPage() {
               </span>
             </h2>
 
-            {selectedRunForFailures.failureScenarios?.length > 0 ? (
+            {selectedRunForFailures.scenarios?.length > 0 ? (
               <ul className="space-y-3 max-h-[400px] overflow-y-auto px-2 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                {selectedRunForFailures.failureScenarios.map(
-                  (scenario: string, index: number) => (
+                {selectedRunForFailures.scenarios.map(
+                  (scenario, index) => (
                     <li
                       key={index}
                       className="flex items-start gap-2 bg-gray-700 p-3 rounded-lg shadow-sm hover:bg-gray-600"
