@@ -74,7 +74,7 @@ export default function TestRunHistoryPage() {
             <tbody>
               {runs.map((run) => (
                 <tr key={run.runId} className="hover:bg-gray-700 transition">
-                  <td className="px-6 py-4 border-b">{run.runId}</td>
+                  <td className="px-6 py-4 border-b font-mono text-yellow-300">{run.runId}</td>
                   <td className="px-6 py-4 border-b">
                     {run.tags?.length ? run.tags : '—'}
                   </td>
