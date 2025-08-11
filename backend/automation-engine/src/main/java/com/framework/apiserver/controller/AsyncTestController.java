@@ -15,6 +15,10 @@ import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
+/**
+ * REST controller for managing asynchronous test executions and reruns.
+ * Provides endpoints for initiating, monitoring, and canceling asynchronous jobs.
+ */
 @RestController
 @RequestMapping("/api/tests")
 public class AsyncTestController {
