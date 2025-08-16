@@ -19,7 +19,7 @@ public interface TestExecutionService {
      * Executes tests asynchronously based on the specified tag and associates the execution with a job ID.
      *
      * @param tag The tag used to filter and execute specific tests.
-     * @param jobId The unique identifier for the asynchronous test execution job.
+     * @param createdBy The unique identifier for the asynchronous test execution job.
      */
-    void runTestsAsync(String tag, String jobId);
+    String runTestsAsync(String tag, String createdBy);
 }

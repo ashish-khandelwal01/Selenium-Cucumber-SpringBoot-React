@@ -27,15 +27,15 @@ public interface TestRerunService {
      * Reruns all tests for a specific test run asynchronously.
      *
      * @param runId The ID of the test run to rerun.
-     * @param jobId The unique identifier for the asynchronous rerun job.
+     * @param createdBy The ID of the user who started the job.
      */
-    void rerunTestsAsync(String runId, String jobId);
+    String rerunTestsAsync(String runId, String createdBy);
 
     /**
      * Reruns only the failed tests for a specific test run asynchronously.
      *
      * @param runId The ID of the test run to rerun failed tests for.
-     * @param jobId The unique identifier for the asynchronous rerun job.
+     * @param createdBy The ID of the user who started the job.
      */
-    void rerunFailedTestsAsync(String runId, String jobId);
+    String rerunFailedTestsAsync(String runId, String createdBy);
 }

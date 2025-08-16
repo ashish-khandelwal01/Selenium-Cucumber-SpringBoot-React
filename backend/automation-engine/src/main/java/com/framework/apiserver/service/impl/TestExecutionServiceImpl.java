@@ -1,6 +1,7 @@
 package com.framework.apiserver.service.impl;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
+import com.framework.apiserver.service.JobTrackingService;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.testrunner.TestRunner;
@@ -40,6 +41,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     private AsyncJobManager asyncJobManager;
 
     @Autowired
+    private JobTrackingService jobTrackingService;
+
+    @Autowired
     private TestRunInfoService testRunInfoService;
 
     /**
@@ -72,6 +76,34 @@ public class TestExecutionServiceImpl implements TestExecutionService {
         }
     }
 
+    /**
+     * Executes Cucumber tests asynchronously based on the specified tag and created by.
+     *
+     * <p>This method updates the job status to "running", executes the tests,
+     * and updates the job status to "completed" or "failed" based on the result.</p>
+     *
+     * @param tag   The Cucumber tag used to filter the tests to be executed.
+     * @param createdBy The ID of the user who started the job.
+     */
+    public String runTestsAsync(String tag, String createdBy) {
+        String jobId = asyncJobManager.createJobWithTracking(null, tag, createdBy);
+        System.out.println("=========Starting async job with ID: " + jobId + " for tag: " + tag);
+        Thread jobThread = new Thread(() -> {
+            asyncJobManager.setJobRunning(jobId);
+            try {
+                TestExecutionResponse response = runCucumberTests(tag);
+                asyncJobManager.completeJob(jobId, response);
+            } catch (Exception e) {
+                asyncJobManager.failJob(jobId, e.getMessage());
+            }
+        });
+
+        jobThread.setName("AsyncTest-" + tag + "-" + jobId.substring(0, 8));
+        asyncJobManager.registerJobThread(jobId, jobThread);
+        jobThread.start();
+
+        return jobId;
+    }
 
     /**
      * Executes Cucumber tests asynchronously based on the specified tag and job ID.
@@ -82,7 +114,8 @@ public class TestExecutionServiceImpl implements TestExecutionService {
      * @param tag   The Cucumber tag used to filter the tests to be executed.
      * @param jobId The unique identifier of the asynchronous job.
      */
-    public void runTestsAsync(String tag, String jobId) {
+    @Deprecated
+    public void runTestsAsyncLegacy(String tag, String jobId) {
         Thread jobThread = new Thread(() -> {
             asyncJobManager.setJobRunning(jobId);
             try {
@@ -92,6 +125,7 @@ public class TestExecutionServiceImpl implements TestExecutionService {
                 asyncJobManager.failJob(jobId);
             }
         });
+        jobThread.setName("AsyncTest-" + tag + "-" + jobId.substring(0, 8));
         asyncJobManager.registerJobThread(jobId, jobThread);
         jobThread.start();
     }
