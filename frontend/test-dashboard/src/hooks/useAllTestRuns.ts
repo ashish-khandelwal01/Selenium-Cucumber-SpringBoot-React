@@ -21,5 +21,5 @@ export function useAllTestRuns() {
     fetchRuns();
   }, [fetchRuns]);
 
-  return { total, loading, refetch: fetchRuns };
+  return { total, loading, fetchRuns };
 }

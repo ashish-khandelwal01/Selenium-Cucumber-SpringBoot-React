@@ -5,6 +5,7 @@ import { usePassFailPie } from '../hooks/usePassFailPie';
 import { useTestResults } from '../hooks/useTestResults';
 import { useListReports } from '../hooks/useListTestRuns';
 import { useAllTestRuns } from '../hooks/useAllTestRuns';
+import { useActiveJobTracking } from '../hooks/useActiveJobTracking';
 import TestRunCard from './TestRunCard';
 import { formatDuration } from "@/utils/RunCardUtil";
 import {
@@ -22,7 +23,8 @@ import {
 
 const Dashboard = () => {
   const { runs, loading, error, fetchLatestRuns } = useTestRuns();
-  const { total, loading: loadingTotal } = useAllTestRuns();
+  const { total: activeJobsTotal, loading: loadingActiveJobs, error: fetchingError, fetchActiveJobs } = useActiveJobTracking();
+  const { total, loading: loadingTotal, fetchRuns } = useAllTestRuns();
   const {
     runs: runs_pie,
     loading: loading_pie,
@@ -47,10 +49,12 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchLatestRuns();
+    fetchActiveJobs();
+    fetchRuns();
     fetchDailySummary();
     fetchPassFailPie();
     fetchRunList();
-  }, [fetchLatestRuns, fetchDailySummary, fetchPassFailPie, fetchRunList]);
+  }, [fetchLatestRuns, fetchActiveJobs, fetchRuns, fetchDailySummary, fetchPassFailPie, fetchRunList]);
 
   const COLORS = ['#3554a5', '#ef4444'];
 
@@ -94,7 +98,7 @@ const Dashboard = () => {
           <CardContent className="p-4">
             Running Jobs
             <br />
-            <span className="text-2xl font-bold">5</span>
+            <span className="text-2xl font-bold">{activeJobsTotal}</span>
           </CardContent>
         </Card>
         <Card>
