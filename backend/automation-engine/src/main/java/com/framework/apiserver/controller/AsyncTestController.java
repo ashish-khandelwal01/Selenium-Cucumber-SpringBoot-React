@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
  */
 @RestController
 @RequestMapping("/api/tests")
+@CrossOrigin(origins = "*")
 public class AsyncTestController {
 
     @Autowired
@@ -47,9 +48,9 @@ public class AsyncTestController {
             }
     )
     @PostMapping("/async-run")
-    public ResponseEntity<Map<String, String>> runAsync(@RequestParam String tags) {
-        String jobId = asyncJobManager.createJob();
-        testExecutionService.runTestsAsync(tags, jobId);
+    public ResponseEntity<Map<String, String>> runAsync(@RequestParam String tags,
+                                                        @RequestParam(defaultValue = "system") String createdBy) {
+        String jobId = testExecutionService.runTestsAsync(tags, createdBy);
         return ResponseEntity.ok(Collections.singletonMap("jobId", jobId));
     }
 
@@ -68,9 +69,9 @@ public class AsyncTestController {
             }
     )
     @PostMapping("/async-rerun")
-    public ResponseEntity<Map<String, String>> rerunAsync(@RequestParam String runId) {
-        String jobId = asyncJobManager.createJob();
-        testRerunService.rerunTestsAsync(runId, jobId);
+    public ResponseEntity<Map<String, String>> rerunAsync(@RequestParam String runId,
+                                                          @RequestParam(defaultValue = "system") String createdBy) {
+        String jobId = testRerunService.rerunTestsAsync(runId, createdBy);
         return ResponseEntity.ok(Collections.singletonMap("jobId", jobId));
     }
 
@@ -89,9 +90,9 @@ public class AsyncTestController {
             }
     )
     @PostMapping("/async-rerun/failed")
-    public ResponseEntity<Map<String, String>> rerunFailedAsync(@RequestParam String runId) {
-        String jobId = asyncJobManager.createJob();
-        testRerunService.rerunFailedTestsAsync(runId, jobId);
+    public ResponseEntity<Map<String, String>> rerunFailedAsync(@RequestParam String runId,
+                                                                @RequestParam(defaultValue = "system") String createdBy) {
+        String jobId = testRerunService.rerunFailedTestsAsync(runId, createdBy);
         return ResponseEntity.ok(Collections.singletonMap("jobId", jobId));
     }
 

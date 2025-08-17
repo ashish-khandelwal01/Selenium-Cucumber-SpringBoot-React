@@ -1,6 +1,7 @@
 package com.framework.apiserver.service.impl;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
+import com.framework.apiserver.service.JobTrackingService;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRunInfoService;
 import com.framework.apiserver.testrunner.TestRunner;
@@ -40,6 +41,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     private AsyncJobManager asyncJobManager;
 
     @Autowired
+    private JobTrackingService jobTrackingService;
+
+    @Autowired
     private TestRunInfoService testRunInfoService;
 
     /**
@@ -48,30 +52,69 @@ public class TestExecutionServiceImpl implements TestExecutionService {
      * <p>This method sets system properties for Cucumber tag filtering, runs the tests
      * using JUnitCore, and processes the results to generate a summary of the execution.</p>
      *
-     * @param tag The Cucumber tag used to filter the tests to be executed.
+     * @param tag       The Cucumber tag used to filter the tests to be executed.
+     * @param jobId  The unique identifier for the asynchronous test execution job.
      * @return A TestExecutionResponse object containing the execution status,
-     *         the number of test failures, and the run ID.
+     * the number of test failures, and the run ID.
      */
-    public TestExecutionResponse runCucumberTests(String tag) {
+    public TestExecutionResponse runCucumberTests(String tag, String jobId, boolean isAsync) {
         String runId = CommonUtils.generateRunId();
         System.out.println("Run ID: " + runId);
         LocalDateTime startTime = LocalDateTime.now();
+        if(!isAsync) {
+            asyncJobManager.setJobRunning(jobId);
+        }
         try {
             // Command to launch a new JVM process
             CommonUtils.testCaseRun(tag, runId, Path.of("."));
+
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
 
             HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, tag, runId, startTime, endTime,
                     durationSeconds);
-
-            return new TestExecutionResponse(String.valueOf(result.get("status")),
-                    (Integer) result.get("failureCount"), runId);
+            TestExecutionResponse response = new TestExecutionResponse(
+                    String.valueOf(result.get("status")),
+                    (Integer) result.get("failureCount"),
+                    runId
+            );
+            if(!isAsync) {
+                asyncJobManager.completeJob(jobId, response);
+            }
+            return response;
         } catch (Exception e) {
+            asyncJobManager.failJob(jobId, e.getMessage());
             return new TestExecutionResponse("Execution Failed: " + e.getMessage(), -1, null);
         }
     }
 
+    /**
+     * Executes Cucumber tests asynchronously based on the specified tag and created by.
+     *
+     * <p>This method updates the job status to "running", executes the tests,
+     * and updates the job status to "completed" or "failed" based on the result.</p>
+     *
+     * @param tag   The Cucumber tag used to filter the tests to be executed.
+     * @param createdBy The ID of the user who started the job.
+     */
+    public String runTestsAsync(String tag, String createdBy) {
+        String jobId = asyncJobManager.createJobWithTracking(null, tag, createdBy);
+        Thread jobThread = new Thread(() -> {
+            asyncJobManager.setJobRunning(jobId);
+            try {
+                TestExecutionResponse response = runCucumberTests(tag, jobId, true);
+                asyncJobManager.completeJob(jobId, response);
+            } catch (Exception e) {
+                asyncJobManager.failJob(jobId, e.getMessage());
+            }
+        });
+
+        jobThread.setName("AsyncTest-" + tag + "-" + jobId.substring(0, 8));
+        asyncJobManager.registerJobThread(jobId, jobThread);
+        jobThread.start();
+
+        return jobId;
+    }
 
     /**
      * Executes Cucumber tests asynchronously based on the specified tag and job ID.
@@ -82,16 +125,18 @@ public class TestExecutionServiceImpl implements TestExecutionService {
      * @param tag   The Cucumber tag used to filter the tests to be executed.
      * @param jobId The unique identifier of the asynchronous job.
      */
-    public void runTestsAsync(String tag, String jobId) {
+    @Deprecated
+    public void runTestsAsyncLegacy(String tag, String jobId) {
         Thread jobThread = new Thread(() -> {
             asyncJobManager.setJobRunning(jobId);
             try {
-                TestExecutionResponse response = runCucumberTests(tag);
+                TestExecutionResponse response = runCucumberTests(tag, jobId, true);
                 asyncJobManager.completeJob(jobId, response);
             } catch (Exception e) {
                 asyncJobManager.failJob(jobId);
             }
         });
+        jobThread.setName("AsyncTest-" + tag + "-" + jobId.substring(0, 8));
         asyncJobManager.registerJobThread(jobId, jobThread);
         jobThread.start();
     }

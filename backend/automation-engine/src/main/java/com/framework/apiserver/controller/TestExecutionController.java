@@ -1,14 +1,12 @@
 package com.framework.apiserver.controller;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
+import com.framework.apiserver.service.JobTrackingService;
 import com.framework.apiserver.service.TestExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * TestExecutionController is a REST controller that handles API requests
@@ -36,10 +34,14 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/tests")
+@CrossOrigin(origins = "*")
 public class TestExecutionController {
 
     @Autowired
     private TestExecutionService testExecutionService;
+
+    @Autowired
+    private JobTrackingService jobTrackingService;
 
     /**
      * Executes Cucumber tests based on the provided tags.
@@ -57,8 +59,10 @@ public class TestExecutionController {
             }
     )
     @PostMapping("/run")
-    public TestExecutionResponse runTests(@RequestParam(defaultValue = "") String tags) {
-        return testExecutionService.runCucumberTests(tags);
+    public TestExecutionResponse runTests(@RequestParam(defaultValue = "") String tags,
+                                          @RequestParam(defaultValue = "system") String createdBy) {
+        String jobId = jobTrackingService.startSyncJob(tags, createdBy);
+        return testExecutionService.runCucumberTests(tags, jobId, false);
     }
 
 }
