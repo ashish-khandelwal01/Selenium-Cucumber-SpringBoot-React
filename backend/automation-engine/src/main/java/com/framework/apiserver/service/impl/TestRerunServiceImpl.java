@@ -55,10 +55,11 @@ public class TestRerunServiceImpl implements TestRerunService {
      * `run-info.json` file and triggers the execution of all tests using those tags.</p>
      *
      * @param runId The unique identifier of the test run to rerun.
+     * @param jobId The unique identifier of the asynchronous job.
      * @return A TestExecutionResponse object containing the results of the rerun.
      */
     @Override
-    public TestExecutionResponse rerunAll(String runId) {
+    public TestExecutionResponse rerunAll(String runId, String jobId) {
         File infoFile = new File(REPORTS_BASE_PATH + "/" + runId + "/run-info.json");
         if (!infoFile.exists()) {
             return new TestExecutionResponse("Run ID not found: " + runId, -1, runId);
@@ -68,7 +69,7 @@ public class TestRerunServiceImpl implements TestRerunService {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode node = mapper.readTree(infoFile);
             String tags = node.get("tags").asText();
-            return testExecutionService.runCucumberTests(tags);
+            return testExecutionService.runCucumberTests(tags, jobId, false);
         } catch (Exception e) {
             return new TestExecutionResponse("Failed to read run-info.json: " + e.getMessage(), -1, null);
         }
@@ -85,7 +86,8 @@ public class TestRerunServiceImpl implements TestRerunService {
      * @return A TestExecutionResponse object containing the results of the rerun.
      */
     @Override
-    public TestExecutionResponse rerunFailed(String runId) {
+    public TestExecutionResponse rerunFailed(String runId, String createdBy) {
+        String jobId = asyncJobManager.createJobWithTracking(runId, "Rerun", createdBy);
         List<String> failedScenarioPathsWithLines = testRunInfoService.getFailureScenarios(runId);
         if (failedScenarioPathsWithLines.isEmpty()) {
             return new TestExecutionResponse("No failed scenarios found for runId " + runId, 0, null);
@@ -95,6 +97,7 @@ public class TestRerunServiceImpl implements TestRerunService {
             String newRunId = CommonUtils.generateRunId();
             LocalDateTime startTime = LocalDateTime.now();
             Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
+            asyncJobManager.setJobRunning(jobId);
             Files.write(rerunFilePath, failedScenarioPathsWithLines);
             CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
             commonUtils.deleteFile(rerunFilePath.toString());
@@ -103,10 +106,17 @@ public class TestRerunServiceImpl implements TestRerunService {
             HashMap<String, Object> result = commonUtils.createRunInfoFileAndDb(testRunInfoService, "Rerun", newRunId, startTime, endTime,
                     durationSeconds);
 
-            return new TestExecutionResponse(String.valueOf(result.get("status")),
-                    (Integer) result.get("failureCount"), newRunId);
+            TestExecutionResponse response = new TestExecutionResponse(
+                    String.valueOf(result.get("status")),
+                    (Integer) result.get("failureCount"),
+                    runId
+            );
+            asyncJobManager.completeJob(jobId, response);
+
+            return response;
 
         } catch (Exception e) {
+            asyncJobManager.failJob(jobId, e.getMessage());
             return new TestExecutionResponse("Rerun Failed: " + e.getMessage(), -1,null);
         }
     }
@@ -133,7 +143,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode node = mapper.readTree(infoFile);
                 String tags = node.get("tags").asText();
-                TestExecutionResponse response = testExecutionService.runCucumberTests(tags);
+                TestExecutionResponse response = testExecutionService.runCucumberTests(tags, jobId, true);
                 asyncJobManager.completeJob(jobId, response);
             } catch (Exception e) {
                 asyncJobManager.failJob(jobId);
@@ -167,7 +177,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode node = mapper.readTree(infoFile);
                 String tags = node.get("tags").asText();
-                TestExecutionResponse response = testExecutionService.runCucumberTests(tags);
+                TestExecutionResponse response = testExecutionService.runCucumberTests(tags, jobId, true);
                 asyncJobManager.completeJob(jobId, response);
             } catch (Exception e) {
                 asyncJobManager.failJob(jobId);

@@ -1,6 +1,7 @@
 package com.framework.apiserver.controller;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
+import com.framework.apiserver.service.JobTrackingService;
 import com.framework.apiserver.service.TestExecutionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -41,6 +42,9 @@ public class TestExecutionController {
     @Autowired
     private TestExecutionService testExecutionService;
 
+    @Autowired
+    private JobTrackingService jobTrackingService;
+
     /**
      * Executes Cucumber tests based on the provided tags.
      *
@@ -57,8 +61,10 @@ public class TestExecutionController {
             }
     )
     @PostMapping("/run")
-    public TestExecutionResponse runTests(@RequestParam(defaultValue = "") String tags) {
-        return testExecutionService.runCucumberTests(tags);
+    public TestExecutionResponse runTests(@RequestParam(defaultValue = "") String tags,
+                                          @RequestParam(defaultValue = "system") String createdBy) {
+        String jobId = jobTrackingService.startSyncJob(tags, createdBy);
+        return testExecutionService.runCucumberTests(tags, jobId, false);
     }
 
 }
