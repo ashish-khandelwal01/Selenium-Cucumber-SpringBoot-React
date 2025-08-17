@@ -29,15 +29,13 @@ export function useActiveJobTracking() {
   }, []);
 
   const refreshData = useCallback(() => {
-    // Fallback to REST API
     fetchActiveJobs();
-  }, [isConnected, fetchActiveJobs]);
+  }, [fetchActiveJobs]);
 
   return {
     total,
     loading,
     error,
-    isConnected,
     fetchActiveJobs: refreshData
   };
 }
