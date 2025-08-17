@@ -11,6 +11,33 @@ import axios from 'axios';
 const BASE_URL = 'http://localhost:8080/api/jobs'; // or your deployed Spring Boot server
 
 /**
+ * Creates an SSE connection for real-time job updates.
+ *
+ * @function createSSEConnection
+ * @param {Function} onMessage - Callback function to handle incoming messages
+ * @param {Function} onError - Callback function to handle connection errors
+ * @param {Function} onOpen - Callback function to handle connection open
+ * @returns {EventSource} The EventSource instance
+ */
+export const createSSEConnection = (onMessage, onError, onOpen) => {
+    const eventSource = new EventSource(`${BASE_URL}/updates`);
+
+    eventSource.onopen = onOpen || (() => {});
+    eventSource.onerror = onError || (() => {});
+
+    eventSource.addEventListener('job-status-update', (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (onMessage) onMessage(data);
+        } catch (error) {
+            console.error('Failed to parse SSE message:', error);
+        }
+    });
+
+    return eventSource;
+};
+
+/**
  * Retrieves a summary of job statuses.
  *
  * @function getJobStatusSummary
@@ -69,3 +96,75 @@ export const cancelJob = (jobId) =>
     axios.post(`${BASE_URL}/${jobId}/cancel`, null, {
         params: { jobId: jobId },
     });
+
+
+/**
+ * Utility function to handle SSE connection with automatic reconnection.
+ *
+ * @function createReconnectingSSE
+ * @param {Function} onMessage - Callback for messages
+ * @param {Function} onConnectionChange - Callback for connection status changes
+ * @param {number} reconnectDelay - Delay before reconnection in milliseconds (default: 3000)
+ * @returns {Object} Object with connect, disconnect, and isConnected methods
+ */
+export const createReconnectingSSE = (onMessage, onConnectionChange, reconnectDelay = 3000) => {
+    let eventSource = null;
+    let isConnected = false;
+    let reconnectTimeout = null;
+    let shouldReconnect = true;
+
+    const connect = () => {
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        eventSource = createSSEConnection(
+            onMessage,
+            () => {
+                isConnected = false;
+                if (onConnectionChange) onConnectionChange(false);
+
+                // Attempt reconnection
+                if (shouldReconnect && !reconnectTimeout) {
+                    reconnectTimeout = setTimeout(() => {
+                        reconnectTimeout = null;
+                        connect();
+                    }, reconnectDelay);
+                }
+            },
+            () => {
+                isConnected = true;
+                if (onConnectionChange) onConnectionChange(true);
+
+                // Clear any pending reconnection
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
+            }
+        );
+    };
+
+    const disconnect = () => {
+        shouldReconnect = false;
+
+        if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+        }
+
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+
+        isConnected = false;
+        if (onConnectionChange) onConnectionChange(false);
+    };
+
+    return {
+        connect,
+        disconnect,
+        isConnected: () => isConnected
+    };
+};

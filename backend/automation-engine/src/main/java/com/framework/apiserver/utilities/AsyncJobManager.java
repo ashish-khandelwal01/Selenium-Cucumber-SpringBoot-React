@@ -62,6 +62,7 @@ public class AsyncJobManager {
     public void failJob(String jobId) {
         jobStatusMap.put(jobId, JobStatus.FAILED);
         jobThreadMap.remove(jobId);
+        jobTrackingService.updateJobStatus(jobId, JobStatus.FAILED);
     }
 
     public void failJob(String jobId, String errorMessage) {

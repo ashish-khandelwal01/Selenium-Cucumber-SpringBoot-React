@@ -3,6 +3,7 @@ package com.framework.apiserver.service;
 import com.framework.apiserver.config.JobStatus;
 import com.framework.apiserver.dto.JobStatusSummary;
 import com.framework.apiserver.entity.JobTracking;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +13,9 @@ import java.util.Optional;
  * Provides methods for creating, updating, and monitoring jobs.
  */
 public interface JobTrackingService {
+
+    SseEmitter createSseEmitter();
+    void broadcastJobUpdate();
 
     /**
      * Starts an asynchronous job with the given parameters.

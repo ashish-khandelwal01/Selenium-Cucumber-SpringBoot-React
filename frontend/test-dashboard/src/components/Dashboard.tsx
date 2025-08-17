@@ -23,7 +23,16 @@ import {
 
 const Dashboard = () => {
   const { runs, loading, error, fetchLatestRuns } = useTestRuns();
-  const { total: activeJobsTotal, loading: loadingActiveJobs, error: fetchingError, fetchActiveJobs } = useActiveJobTracking();
+  const {
+      total: activeJobsTotal,
+      asyncJobs,
+      syncJobs,
+      loading: loadingJobs,
+      error: errorJobs,
+      isConnected,
+      fetchActiveJobs,
+      reconnect
+    } = useActiveJobTracking();
   const { total, loading: loadingTotal, fetchRuns } = useAllTestRuns();
   const {
     runs: runs_pie,
@@ -73,7 +82,6 @@ const Dashboard = () => {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     return runsReportList.filter((run) => {
       const runDate = new Date(run.startTime);
-      console.log('Run Date:', run.status);
       return runDate >= todayStart && run.status.includes('Failures');
     }).length;
   }, [runsReportList]);

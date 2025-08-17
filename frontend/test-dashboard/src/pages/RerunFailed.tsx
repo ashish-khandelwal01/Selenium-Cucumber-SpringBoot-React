@@ -26,9 +26,6 @@ export default function FailedTestRunHistoryPage() {
     canRerun,
     handleExternalMessage,
   } = useTestRunFailedManager({
-    onMessage: (msg) => {
-      console.log('FailedManager message:', msg);
-    },
     onAsyncJobCreated: (jobId, runId) => {
       addAsyncJob(jobId, runId);
     },
