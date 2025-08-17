@@ -12,7 +12,6 @@ export function useActiveJobTracking() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
 
   const fetchActiveJobs = useCallback(async () => {
     setLoading(true);
