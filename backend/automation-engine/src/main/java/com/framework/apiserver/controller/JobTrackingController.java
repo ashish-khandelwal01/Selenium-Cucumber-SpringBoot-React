@@ -1,7 +1,6 @@
 package com.framework.apiserver.controller;
 
 import com.framework.apiserver.dto.JobStatusSummary;
-import com.framework.apiserver.dto.StartJobRequest;
 import com.framework.apiserver.entity.JobTracking;
 import com.framework.apiserver.service.JobTrackingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -93,21 +92,6 @@ public class JobTrackingController {
     @GetMapping("/by-run/{runId}")
     public ResponseEntity<List<JobTracking>> getJobsByRunId(@PathVariable String runId) {
         return ResponseEntity.ok(jobTrackingService.getJobsByRunId(runId));
-    }
-
-    @Operation(
-            summary = "Start synchronous job",
-            description = "Starts a synchronous job with the provided details.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Synchronous job started successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request body"),
-                    @ApiResponse(responseCode = "500", description = "Internal server error")
-            }
-    )
-    @PostMapping("/sync/start")
-    public ResponseEntity<String> startSyncJob(@RequestBody StartJobRequest request) {
-        String jobId = jobTrackingService.startSyncJob(request.getTag(), request.getCreatedBy());
-        return ResponseEntity.ok(jobId);
     }
 
     @Operation(

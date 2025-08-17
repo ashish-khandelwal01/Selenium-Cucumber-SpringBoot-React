@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
  */
 @RestController
 @RequestMapping("/api/tests")
+@CrossOrigin(origins = "*")
 public class AsyncTestController {
 
     @Autowired
