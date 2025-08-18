@@ -35,3 +35,4 @@
 **/*.njsproj
 **/*.sln
 **/*.sw?
+.env
