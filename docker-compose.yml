@@ -25,6 +25,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/automation_engine_cucumber_react
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: admin
+    env_file:
+      - .env
     depends_on:
       - postgres
 
