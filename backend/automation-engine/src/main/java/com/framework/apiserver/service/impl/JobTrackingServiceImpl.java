@@ -33,16 +33,25 @@ public class JobTrackingServiceImpl implements JobTrackingService {
     private final JobTrackingRepository jobTrackingRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    // List to manage active SSE emitters for real-time updates
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
+    // List of statuses considered as active
     private static final List<JobStatus> ACTIVE_STATUSES = List.of(
             JobStatus.PENDING, JobStatus.RUNNING
     );
 
+    // List of statuses considered as completed
     private static final List<JobStatus> COMPLETED_STATUSES = List.of(
             JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED
     );
 
+    /**
+     * Creates a new Server-Sent Events (SSE) emitter for real-time job status updates.
+     * Sends the current job status to the client immediately upon connection.
+     *
+     * @return A new SseEmitter instance for the client.
+     */
     @Override
     public SseEmitter createSseEmitter() {
         SseEmitter emitter = new SseEmitter(0L); // No timeout
@@ -88,6 +97,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
     /**
      * Broadcasts job status updates to all connected SSE clients.
+     * Removes any emitters that fail to receive the update.
      */
     @Override
     public void broadcastJobUpdate() {
@@ -123,7 +133,6 @@ public class JobTrackingServiceImpl implements JobTrackingService {
                     deadEmitters.size(), emitters.size());
         }
     }
-
     /**
      * Starts an asynchronous job with the provided details.
      *
