@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { useTestRuns } from '../hooks/useTestRuns';
 import { usePassFailPie } from '../hooks/usePassFailPie';
@@ -6,8 +6,9 @@ import { useTestResults } from '../hooks/useTestResults';
 import { useListReports } from '../hooks/useListTestRuns';
 import { useAllTestRuns } from '../hooks/useAllTestRuns';
 import { useActiveJobTracking } from '../hooks/useActiveJobTracking';
+import RunningJobsModal from './RunningJobsModal';
 import TestRunCard from './TestRunCard';
-import { formatDuration } from "@/utils/RunCardUtil";
+import { formatDuration } from "../utils/RunCardUtil";
 import {
   PieChart,
   Pie,
@@ -56,6 +57,8 @@ const Dashboard = () => {
     fetchRunList,
   } = useListReports();
 
+  const [isJobsModalOpen, setIsJobsModalOpen] = useState(false);
+
   useEffect(() => {
     fetchLatestRuns();
     fetchActiveJobs();
@@ -85,6 +88,7 @@ const Dashboard = () => {
       return runDate >= todayStart && run.status.includes('Failures');
     }).length;
   }, [runsReportList]);
+
   return (
     <main className="flex-1 p-6 space-y-6 overflow-auto">
       <div className="grid grid-cols-4 gap-4">
@@ -102,11 +106,38 @@ const Dashboard = () => {
             <span className="text-2xl font-bold">{failedToday}</span>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer hover:shadow-lg hover:bg-gray-50 transition-all duration-200 relative"
+          onClick={() => setIsJobsModalOpen(true)}
+        >
           <CardContent className="p-4">
-            Running Jobs
-            <br />
-            <span className="text-2xl font-bold">{activeJobsTotal}</span>
+            <div className="flex items-center justify-between">
+              <div>
+                Running Jobs
+                <br />
+                <span className="text-2xl font-bold">{activeJobsTotal}</span>
+                {/* Connection status indicator */}
+                <div className="flex items-center mt-1 space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  <span className="text-xs text-gray-500">
+                    {isConnected ? 'Live' : 'Disconnected'}
+                  </span>
+                </div>
+              </div>
+              <div className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+            {activeJobsTotal > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="flex space-x-4 text-xs text-gray-600">
+                  <span>Async: {asyncJobs}</span>
+                  <span>Sync: {syncJobs}</span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -222,6 +253,13 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Running Jobs Modal */}
+      <RunningJobsModal
+        isOpen={isJobsModalOpen}
+        onClose={() => setIsJobsModalOpen(false)}
+        totalJobs={activeJobsTotal}
+      />
     </main>
   );
 };

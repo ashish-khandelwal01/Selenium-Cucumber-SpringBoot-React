@@ -53,7 +53,6 @@ public class BaseClass implements ITestListener, ISuiteListener {
      */
     public void infoLog(String message) {
         extentReportLog("\t" + message);
-        System.out.println(message);
     }
 
     /**
@@ -64,7 +63,6 @@ public class BaseClass implements ITestListener, ISuiteListener {
      */
     public void failLog(String message) {
         extentReportLog("\tFailed: " + message);
-        System.out.println(message);
         Assert.fail(message);
     }
 
@@ -75,7 +73,6 @@ public class BaseClass implements ITestListener, ISuiteListener {
      */
     public void passLog(String message) {
         extentReportLog("\t" + message);
-        System.out.println(message);
     }
 
     /**
@@ -91,10 +88,10 @@ public class BaseClass implements ITestListener, ISuiteListener {
                 message = message.replace("\n", "<br>");
                 scenario.log(message);
             } else {
-                System.out.println("Scenario is null. Could not log to report.");
+                infoLog("Scenario is null. Could not log to report.");
             }
         } catch (Exception e) {
-            System.out.println("Test step status is not updated in Extent report");
+            infoLog("Test step status is not updated in Extent report");
         }
     }
 }

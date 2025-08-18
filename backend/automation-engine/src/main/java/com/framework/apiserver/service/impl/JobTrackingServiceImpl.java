@@ -133,7 +133,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public String startAsyncJob(String runId, String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -162,7 +162,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public String startSyncJob(String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -191,7 +191,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param status The new status to set for the job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void updateJobStatus(String jobId, JobStatus status) {
         updateJobStatus(jobId, status, null);
     }
@@ -204,7 +204,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param errorMessage The error message, if any, associated with the job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void updateJobStatus(String jobId, JobStatus status, String errorMessage) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -241,7 +241,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param status The status to set for the completed job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void completeJob(String jobId, JobStatus status) {
         updateJobStatus(jobId, status);
     }
@@ -253,7 +253,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return True if the job was successfully cancelled, false otherwise.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public boolean cancelJob(String jobId) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -346,7 +346,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      */
     @Override
     @Scheduled(fixedRate = 3600000) // 1 hour
-    @Transactional
+    @Transactional(timeout = 30)
     public void cleanupOldJobs() {
         LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
 
