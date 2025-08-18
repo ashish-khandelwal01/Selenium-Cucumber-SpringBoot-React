@@ -43,6 +43,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
             JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED
     );
 
+
     @Override
     public SseEmitter createSseEmitter() {
         SseEmitter emitter = new SseEmitter(0L); // No timeout
