@@ -122,6 +122,8 @@ public class AsyncJobManager {
     public void failJob(String jobId, String errorMessage) {
         jobStatusMap.put(jobId, JobStatus.FAILED);
         jobThreadMap.remove(jobId);
+
+        // Update job tracking with error message
         jobTrackingService.updateJobStatus(jobId, JobStatus.FAILED, errorMessage);
         log.error("Job {} failed: {}", jobId, errorMessage);
     }
