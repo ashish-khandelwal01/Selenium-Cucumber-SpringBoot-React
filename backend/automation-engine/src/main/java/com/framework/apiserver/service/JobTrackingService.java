@@ -63,6 +63,15 @@ public interface JobTrackingService {
     void completeJob(String jobId, JobStatus status);
 
     /**
+     * fails a job with the given status.
+     *
+     * @param jobId the job ID to complete
+     * @param status the completion status
+     * @param errorMessage the error message (can be null)
+     */
+    void failJob(String jobId, JobStatus status, String errorMessage);
+
+    /**
      * Attempts to cancel an active job.
      *
      * @param jobId the job ID to cancel
