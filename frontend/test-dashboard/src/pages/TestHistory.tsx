@@ -25,9 +25,6 @@ export default function TestRunHistoryPage() {
     canRerun,
     handleExternalMessage,
   } = useTestRunManager({
-    onMessage: (msg) => {
-      console.log('TestRunManager message:', msg);
-    },
     onAsyncJobCreated: (jobId, runId) => {
       addAsyncJob(jobId, runId);
     },

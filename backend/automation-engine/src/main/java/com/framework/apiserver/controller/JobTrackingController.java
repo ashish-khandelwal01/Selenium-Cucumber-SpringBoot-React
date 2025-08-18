@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,19 @@ public class JobTrackingController {
 
     @Autowired
     private JobTrackingService jobTrackingService;
+
+    @Operation(
+            summary = "Get real-time job updates via Server-Sent Events",
+            description = "Establishes an SSE connection for real-time job status updates",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "SSE connection established"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getJobUpdates() {
+        return jobTrackingService.createSseEmitter();
+    }
 
     @Operation(
             summary = "Get job status summary",

@@ -13,12 +13,12 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 /**
@@ -33,13 +33,106 @@ public class JobTrackingServiceImpl implements JobTrackingService {
     private final JobTrackingRepository jobTrackingRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    // List to manage active SSE emitters for real-time updates
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+
+    // List of statuses considered as active
     private static final List<JobStatus> ACTIVE_STATUSES = List.of(
             JobStatus.PENDING, JobStatus.RUNNING
     );
 
+    // List of statuses considered as completed
     private static final List<JobStatus> COMPLETED_STATUSES = List.of(
             JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED
     );
+
+    /**
+     * Creates a new Server-Sent Events (SSE) emitter for real-time job status updates.
+     * Sends the current job status to the client immediately upon connection.
+     *
+     * @return A new SseEmitter instance for the client.
+     */
+    @Override
+    public SseEmitter createSseEmitter() {
+        SseEmitter emitter = new SseEmitter(0L); // No timeout
+        emitters.add(emitter);
+
+        // Send current job status immediately upon connection
+        try {
+            JobStatusSummary currentStatus = getJobStatusSummary();
+            Map<String, Object> data = new HashMap<>();
+            data.put("totalActiveJobs", currentStatus.getTotalActiveJobs());
+            data.put("asyncJobs", currentStatus.getAsyncJobs());
+            data.put("syncJobs", currentStatus.getSyncJobs());
+            data.put("timestamp", LocalDateTime.now().toString());
+
+            emitter.send(SseEmitter.event()
+                    .name("job-status-update")
+                    .data(data));
+
+            log.info("New SSE client connected. Current active jobs: {}", currentStatus.getTotalActiveJobs());
+        } catch (IOException e) {
+            log.error("Failed to send initial data to new SSE client", e);
+            emitters.remove(emitter);
+        }
+
+        // Handle cleanup when client disconnects
+        emitter.onCompletion(() -> {
+            emitters.remove(emitter);
+            log.debug("SSE client disconnected. Active connections: {}", emitters.size());
+        });
+
+        emitter.onTimeout(() -> {
+            emitters.remove(emitter);
+            log.debug("SSE client timed out. Active connections: {}", emitters.size());
+        });
+
+        emitter.onError(throwable -> {
+            emitters.remove(emitter);
+            log.debug("SSE client error. Active connections: {}", emitters.size());
+        });
+
+        return emitter;
+    }
+
+    /**
+     * Broadcasts job status updates to all connected SSE clients.
+     * Removes any emitters that fail to receive the update.
+     */
+    @Override
+    public void broadcastJobUpdate() {
+        if (emitters.isEmpty()) {
+            return; // No clients connected
+        }
+
+        JobStatusSummary status = getJobStatusSummary();
+        Map<String, Object> data = new HashMap<>();
+        data.put("totalActiveJobs", status.getTotalActiveJobs());
+        data.put("asyncJobs", status.getAsyncJobs());
+        data.put("syncJobs", status.getSyncJobs());
+        data.put("timestamp", LocalDateTime.now().toString());
+
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+
+        for (SseEmitter emitter : emitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("job-status-update")
+                        .data(data));
+            } catch (IOException e) {
+                log.debug("Failed to send update to SSE client, removing from list", e);
+                deadEmitters.add(emitter);
+            }
+        }
+
+        // Remove dead emitters
+        emitters.removeAll(deadEmitters);
+
+        if (!deadEmitters.isEmpty()) {
+            log.debug("Removed {} dead SSE connections. Active connections: {}",
+                    deadEmitters.size(), emitters.size());
+        }
+    }
 
     /**
      * Starts an asynchronous job with the provided details.
@@ -50,7 +143,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public String startAsyncJob(String runId, String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -66,7 +159,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
         jobTrackingRepository.save(jobTracking);
         eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "CREATED"));
-
+        broadcastJobUpdate();
         log.info("Started async job: {} for runId: {} with tag: {}", jobId, runId, tag);
         return jobId;
     }
@@ -79,7 +172,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public String startSyncJob(String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -96,7 +189,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
         jobTrackingRepository.save(jobTracking);
         eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "CREATED"));
-
+        broadcastJobUpdate();
         log.info("Started sync job: {} with tag: {}", jobId, tag);
         return jobId;
     }
@@ -108,7 +201,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param status The new status to set for the job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void updateJobStatus(String jobId, JobStatus status) {
         updateJobStatus(jobId, status, null);
     }
@@ -121,7 +214,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param errorMessage The error message, if any, associated with the job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void updateJobStatus(String jobId, JobStatus status, String errorMessage) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -144,7 +237,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
             jobTrackingRepository.save(jobTracking);
             eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "UPDATED"));
-
+            broadcastJobUpdate();
             log.info("Updated job {} status from {} to {}", jobId, oldStatus, status);
         } else {
             log.warn("Attempted to update non-existent job: {}", jobId);
@@ -158,7 +251,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param status The status to set for the completed job.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public void completeJob(String jobId, JobStatus status) {
         updateJobStatus(jobId, status);
     }
@@ -170,7 +263,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return True if the job was successfully cancelled, false otherwise.
      */
     @Override
-    @Transactional
+    @Transactional(timeout = 30)
     public boolean cancelJob(String jobId) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -263,7 +356,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      */
     @Override
     @Scheduled(fixedRate = 3600000) // 1 hour
-    @Transactional
+    @Transactional(timeout = 30)
     public void cleanupOldJobs() {
         LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
 
