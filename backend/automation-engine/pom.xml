@@ -2,6 +2,13 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.4</version>
+        <relativePath/>
+    </parent>
+
 	<groupId>com.framework</groupId>
 	<artifactId>automation-engine</artifactId>
 	<version>1.0.0</version>
@@ -15,19 +22,17 @@
 		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<cucumber.version>7.22.0</cucumber.version>
-		<spring.version>3.4.5</spring.version>
 	</properties>
 
 	<dependencies>
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-jdbc</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.mysql/mysql-connector-j -->
@@ -41,7 +46,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
-			<version>${spring.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 
@@ -55,7 +59,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.modelmapper</groupId>
@@ -79,13 +82,13 @@
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi</artifactId>
-			<version>5.4.0</version>
+			<version>5.4.1</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
-			<version>5.4.0</version>
+			<version>5.4.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.testng</groupId>
@@ -243,7 +246,6 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
-			<version>${spring.version}</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.github.mwiede/jsch -->
 		<dependency>
@@ -271,12 +273,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-            <version>${spring.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-            <version>${spring.version}</version>
         </dependency>
 	</dependencies>
 	<build>
@@ -284,7 +284,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>3.4.5</version>
+				<version>4.0.0-M1</version>
 			</plugin>
 			<!-- Maven Compiler Plugin -->
 			<plugin>
@@ -295,7 +295,7 @@
 					<source>21</source>
 					<target>21</target>
 					<compilerArgs>
-						<arg>--enable-preview</arg> <!-- Optional: If using preview features -->
+						<arg>--enable-preview</arg>
 						<arg>-parameters</arg>
 					</compilerArgs>
 				</configuration>
