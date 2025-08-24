@@ -6,9 +6,10 @@
  * @module testExecutionApi
  */
  
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/tests'; // or your deployed Spring Boot server
+const testsApi = createApi("/tests");
+
 
 /**
  * Sends a POST request to run tests with the specified tags.
@@ -18,6 +19,6 @@ const BASE_URL = 'http://localhost:8080/api/tests'; // or your deployed Spring B
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the test run request.
  */
 export const runTests = (tag) =>
-    axios.post(`${BASE_URL}/run`, null, {
+    testsApi.post(`/run`, null, {
         params: { tags: tag },
     });

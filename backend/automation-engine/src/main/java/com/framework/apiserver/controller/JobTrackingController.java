@@ -36,6 +36,7 @@ public class JobTrackingController {
                     @ApiResponse(responseCode = "500", description = "Internal server error")
             }
     )
+    @CrossOrigin(origins = "*", allowedHeaders = "*")
     @GetMapping(value = "/updates", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter getJobUpdates() {
         return jobTrackingService.createSseEmitter();

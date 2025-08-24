@@ -6,9 +6,9 @@
  * @module dashboardApi
  */
  
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/dashboard'; // or your deployed Spring Boot server
+const dashboardApi = createApi("/dashboard");
 
 
 /**
@@ -18,7 +18,7 @@ const BASE_URL = 'http://localhost:8080/api/dashboard'; // or your deployed Spri
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing all runs.
  */
 export const getAllRuns = () => 
-    axios.get(`${BASE_URL}/runs`);
+    dashboardApi.get(`/runs`);
 
 
 /**
@@ -28,7 +28,7 @@ export const getAllRuns = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing all runs.
  */
 export const getAllRunsByPages = ({ page, size }) => {
-  return axios.get(`${BASE_URL}/runs/pages`, {
+  return dashboardApi.get(`/runs/pages`, {
     params: {
       page,
       size,
@@ -44,7 +44,7 @@ export const getAllRunsByPages = ({ page, size }) => {
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the latest runs.
  */
 export const getLatestRuns = () => 
-    axios.get(`${BASE_URL}/latest`);
+    dashboardApi.get(`/latest`);
 
 /**
  * Retrieves dashboard statistics.
@@ -53,7 +53,7 @@ export const getLatestRuns = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing dashboard statistics.
  */
 export const getStats = () => 
-    axios.get(`${BASE_URL}/stats`);
+    dashboardApi.get(`/stats`);
 
 /**
  * Fetches a specific test run by its ID.
@@ -63,7 +63,7 @@ export const getStats = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the test run details.
  */
 export const getRunById = (runId) => 
-    axios.get(`${BASE_URL}/runs/${runId}`);
+    dashboardApi.get(`/runs/${runId}`);
 
 /**
  * Retrieves a weekly summary from the dashboard API.
@@ -72,7 +72,7 @@ export const getRunById = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the weekly summary.
  */
 export const getWeeklySummary = () => 
-    axios.get(`${BASE_URL}/weekly-summary`);
+    dashboardApi.get(`/weekly-summary`);
 
 /**
  * Retrieves pass/fail pie chart data from the dashboard API.
@@ -81,7 +81,7 @@ export const getWeeklySummary = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing pass/fail pie chart data.
  */
 export const getPassFailPie = () => 
-    axios.get(`${BASE_URL}/pass-fail-pie`);
+    dashboardApi.get(`/pass-fail-pie`);
 
 /**
  * Retrieves data about the top test failures from the dashboard API.
@@ -90,4 +90,4 @@ export const getPassFailPie = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing top failure data.
  */
 export const getTopFailures = () => 
-    axios.get(`${BASE_URL}/top-failures`);
+    dashboardApi.get(`/top-failures`);

@@ -5,9 +5,9 @@
  * @module tagApi
  */
  
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/tags'; // or your deployed Spring Boot server
+const tagsApi = createApi("/");
 
 /**
  * Sends a POST request to get a list of tags.
@@ -17,4 +17,4 @@ const BASE_URL = 'http://localhost:8080/api/tags'; // or your deployed Spring Bo
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the test run request.
  */
 export const getTags = () =>
-    axios.get(`${BASE_URL}`);
+    tagsApi.get('tags');

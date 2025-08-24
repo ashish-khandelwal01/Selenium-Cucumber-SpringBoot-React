@@ -35,6 +35,11 @@ RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor
     apt-get install -y google-chrome-stable && \
     rm -rf /var/lib/apt/lists/*
 
+# Add these lines after WORKDIR /app and before COPY . .
+RUN java -version
+RUN mvn -version
+RUN echo $JAVA_HOME
+
 # Set Chrome binary path for Selenium (optional, but safe)
 ENV CHROME_BIN=/usr/bin/google-chrome
 

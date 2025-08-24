@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getJobStatusSummary } from "@/api/jobTrackingApi";
+import { getJobStatusSummary, createReconnectingSSE } from "@/api/jobTrackingApi";
 
 // Types for better TypeScript support
 interface JobStatusSummary {
@@ -23,8 +23,7 @@ export function useActiveJobTracking() {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sseConnectionRef = useRef<any>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchActiveJobs = useCallback(async () => {
@@ -64,80 +63,60 @@ export function useActiveJobTracking() {
   }, []);
 
   const connectSSE = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+    // Disconnect any existing connection
+    if (sseConnectionRef.current) {
+      sseConnectionRef.current.disconnect();
     }
 
     stopPolling();
 
     try {
-      const eventSource = new EventSource('http://localhost:8080/api/jobs/updates');
-      eventSourceRef.current = eventSource;
-
-      eventSource.onopen = () => {
-        console.log('SSE connection established');
-        setIsConnected(true);
-        setError(null);
-
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-          reconnectTimeoutRef.current = null;
-        }
-      };
-
-      eventSource.addEventListener('job-status-update', (event) => {
-        try {
-          const data: JobStatusUpdate = JSON.parse(event.data);
+      // Create the reconnecting SSE connection
+      sseConnectionRef.current = createReconnectingSSE(
+        // onMessage callback
+        (data: JobStatusUpdate) => {
+          console.log('Job status updated via SSE:', data);
           setTotal(data.totalActiveJobs);
           setAsyncJobs(data.asyncJobs);
           setSyncJobs(data.syncJobs);
           setLoading(false);
+          setError(null);
+        },
+        // onConnectionChange callback
+        (connected: boolean) => {
+          console.log('SSE connection status:', connected ? 'Connected' : 'Disconnected');
+          setIsConnected(connected);
 
-          console.log('Job status updated:', data);
-        } catch (parseError) {
-          console.error('Failed to parse SSE data:', parseError);
-        }
-      });
+          if (connected) {
+            setError(null);
+            stopPolling(); // Stop polling when SSE is connected
+          } else {
+            // Start polling as fallback when SSE is disconnected
+            console.log('Starting polling fallback...');
+            startPolling();
+          }
+        },
+        // reconnectDelay
+        5000 // 5 seconds
+      );
 
-      eventSource.onerror = (event) => {
-        console.error('SSE connection error:', event);
-        setIsConnected(false);
-
-        // Start polling as fallback
-        startPolling();
-
-        if (!reconnectTimeoutRef.current) {
-          reconnectTimeoutRef.current = setTimeout(() => {
-            console.log('Attempting to reconnect SSE...');
-            connectSSE();
-          }, 10000);
-        }
-      };
+      // Start the SSE connection
+      sseConnectionRef.current.connect();
 
     } catch (connectionError) {
       console.error('Failed to establish SSE connection:', connectionError);
       setError('Failed to establish real-time connection');
       setIsConnected(false);
 
+      // Fallback to polling
       startPolling();
-
-      if (!reconnectTimeoutRef.current) {
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connectSSE();
-        }, 10000);
-      }
     }
   }, [startPolling, stopPolling]);
 
   const disconnectSSE = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
+    if (sseConnectionRef.current) {
+      sseConnectionRef.current.disconnect();
+      sseConnectionRef.current = null;
     }
 
     stopPolling();
@@ -163,6 +142,7 @@ export function useActiveJobTracking() {
   }, [fetchActiveJobs]);
 
   const reconnect = useCallback(() => {
+    console.log('Manual reconnect requested...');
     disconnectSSE();
     setTimeout(() => {
       connectSSE();
