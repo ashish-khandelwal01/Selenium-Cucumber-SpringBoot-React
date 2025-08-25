@@ -241,7 +241,6 @@ const Dashboard = () => {
                 <tr>
                   <th className="pb-2">Run ID</th>
                   <th className="pb-2">Status</th>
-                  <th className="pb-2">Triggered By</th>
                   <th className="pb-2">Duration</th>
                   <th className="pb-2">Started At</th>
                   <th className="pb-2"></th>
