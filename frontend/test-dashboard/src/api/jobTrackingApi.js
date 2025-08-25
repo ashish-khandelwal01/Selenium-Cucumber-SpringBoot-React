@@ -34,92 +34,22 @@ const getAuthToken = () => {
  * @param {Function} onOpen - Callback function to handle connection open
  * @returns {Promise<Object>} The SSE connection object with close method
  */
-export const createSSEConnection = async (onMessage, onError, onOpen) => {
-    const token = getAuthToken();
+export const createSSEConnection = (onMessage, onError, onOpen) => {
+    const eventSource = new EventSource(`${BASE_URL}/updates`);
 
-    if (!token) {
-        const error = new Error('No authentication token found');
-        if (onError) onError(error);
-        return null;
-    }
+    eventSource.onopen = onOpen || (() => {});
+    eventSource.onerror = onError || (() => {});
 
-    let controller = new AbortController();
-    let isConnected = false;
-
-    const connect = async () => {
+    eventSource.addEventListener('job-status-update', (event) => {
         try {
-            const response = await fetch(`${BASE_URL}/updates`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'text/event-stream',
-                    'Cache-Control': 'no-cache',
-                },
-                signal: controller.signal
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            isConnected = true;
-            if (onOpen) onOpen();
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (isConnected && !controller.signal.aborted) {
-                const { done, value } = await reader.read();
-
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-
-                // Keep the last incomplete line in buffer
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('event: job-status-update')) {
-                        // Next line should contain the data
-                        continue;
-                    } else if (line.startsWith('data: ')) {
-                        try {
-                            const data = line.slice(6); // Remove 'data: ' prefix
-                            if (data.trim()) {
-                                const parsedData = JSON.parse(data);
-                                if (onMessage) onMessage(parsedData);
-                            }
-                        } catch (parseError) {
-                            console.error('Failed to parse SSE data:', parseError);
-                        }
-                    }
-                }
-            }
+            const data = JSON.parse(event.data);
+            if (onMessage) onMessage(data);
         } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Fetch SSE error:', error);
-                isConnected = false;
-                if (onError) onError(error);
-            }
+            console.error('Failed to parse SSE message:', error);
         }
-    };
+    });
 
-    // Start the connection
-    connect();
-
-    return {
-        close: () => {
-            isConnected = false;
-            controller.abort();
-        },
-        readyState: isConnected ? 1 : 0, // 1 = OPEN, 0 = CONNECTING/CLOSED
-        // EventSource-like properties for compatibility
-        onopen: null,
-        onerror: null,
-        addEventListener: () => {} // Stub for compatibility
-    };
+    return eventSource;
 };
 
 /**
@@ -197,52 +127,36 @@ export const createReconnectingSSE = (onMessage, onConnectionChange, reconnectDe
     let reconnectTimeout = null;
     let shouldReconnect = true;
 
-    const connect = async () => {
+    const connect = () => {
         if (eventSource) {
             eventSource.close();
         }
 
-        try {
-            eventSource = await createSSEConnection(
-                onMessage,
-                (error) => {
-                    console.log('SSE connection lost:', error);
-                    isConnected = false;
-                    if (onConnectionChange) onConnectionChange(false);
+        eventSource = createSSEConnection(
+            onMessage,
+            () => {
+                isConnected = false;
+                if (onConnectionChange) onConnectionChange(false);
 
-                    // Attempt reconnection
-                    if (shouldReconnect && !reconnectTimeout) {
-                        reconnectTimeout = setTimeout(() => {
-                            reconnectTimeout = null;
-                            connect();
-                        }, reconnectDelay);
-                    }
-                },
-                () => {
-                    console.log('SSE connection established');
-                    isConnected = true;
-                    if (onConnectionChange) onConnectionChange(true);
-
-                    // Clear any pending reconnection
-                    if (reconnectTimeout) {
-                        clearTimeout(reconnectTimeout);
+                // Attempt reconnection
+                if (shouldReconnect && !reconnectTimeout) {
+                    reconnectTimeout = setTimeout(() => {
                         reconnectTimeout = null;
-                    }
+                        connect();
+                    }, reconnectDelay);
                 }
-            );
-        } catch (error) {
-            console.error('Failed to create SSE connection:', error);
-            isConnected = false;
-            if (onConnectionChange) onConnectionChange(false);
+            },
+            () => {
+                isConnected = true;
+                if (onConnectionChange) onConnectionChange(true);
 
-            // Attempt reconnection on connection creation failure
-            if (shouldReconnect && !reconnectTimeout) {
-                reconnectTimeout = setTimeout(() => {
+                // Clear any pending reconnection
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
                     reconnectTimeout = null;
-                    connect();
-                }, reconnectDelay);
+                }
             }
-        }
+        );
     };
 
     const disconnect = () => {
