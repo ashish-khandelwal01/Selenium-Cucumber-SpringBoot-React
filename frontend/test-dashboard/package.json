@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/event-source-polyfill": "^1.0.5",
     "axios": "^1.9.0",
     "date-fns": "^4.1.0",
+    "event-source-polyfill": "^1.0.31",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
     "react-datepicker": "^8.3.0",

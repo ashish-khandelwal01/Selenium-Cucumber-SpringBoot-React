@@ -71,7 +71,7 @@ export function useActiveJobTracking() {
     stopPolling();
 
     try {
-      const eventSource = new EventSource('http://localhost:8080/api/jobs/updates');
+      const eventSource = new EventSource('/api/jobs/updates');
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {

@@ -6,9 +6,9 @@
  * @module reportApi
  */
  
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/reports'; // or your deployed Spring Boot server
+const reportsApi = createApi("/reports");
 
 /**
  * Downloads a report as a ZIP file for a specific test run.
@@ -18,7 +18,7 @@ const BASE_URL = 'http://localhost:8080/api/reports'; // or your deployed Spring
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the ZIP file.
  */
 export const downloadReportZip = (runId) =>
-    axios.get(`${BASE_URL}/${runId}/download`, { responseType: "blob" });
+    reportsApi.get(`/${runId}/download`, { responseType: "blob" });
 
 /**
  * Retrieves a list of all available reports.
@@ -27,7 +27,7 @@ export const downloadReportZip = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the list of reports.
  */
 export const listReports = () =>
-    axios.get(`${BASE_URL}/list`);
+    reportsApi.get(`/list`);
 
 /**
  * Views a specific report for a given test run.
@@ -37,4 +37,4 @@ export const listReports = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the response containing the report details.
  */
 export const viewReport = (runId) =>
-    axios.get(`${BASE_URL}/${runId}/view`, { responseType: "blob" });
+    reportsApi.get(`/${runId}/view`, { responseType: "blob" });

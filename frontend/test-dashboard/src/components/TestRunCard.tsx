@@ -29,6 +29,7 @@ const TestRunCard = ({
   triggeredBy,
   durationSeconds,
   startTime,
+  onView,
 }: TestRunCardProps) => {
   const uiStatus = mapBackendStatusToUIStatus(status);
   const formattedDuration = formatDuration(durationSeconds);
@@ -38,11 +39,14 @@ const TestRunCard = ({
     <tr className="border-t border-gray-200 text-sm">
       <td className="py-2">{runId}</td>
       <td className={`py-2 font-medium ${statusTextColor[uiStatus]}`}>{uiStatus}</td>
-      <td className="py-2">{triggeredBy}</td>
       <td className="py-2">{formattedDuration}</td>
       <td className="py-2">{formattedStartTime}</td>
       <td className="py-2">
-        <Button size="sm">View</Button>
+          <button size="sm"
+            onClick={() => onView({ runId, status, durationSeconds, startTime })}
+          >
+            View
+          </button>
       </td>
     </tr>
   );

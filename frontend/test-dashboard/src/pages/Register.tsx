@@ -2,13 +2,13 @@ import React, { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import { Card, CardContent } from "../components/ui/card";
-import { LogIn } from "lucide-react";
+import { UserPlus } from "lucide-react";
 
-const Login: React.FC = () => {
-  const [form, setForm] = useState({ username: "", password: "" });
+const Register: React.FC = () => {
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useContext(AuthContext)!;
+  const { register } = useContext(AuthContext)!;
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -17,14 +17,14 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(form);
+      const result = await register(form);
       if (result.success) {
-        navigate("/");
+        navigate("/login");
       } else {
-        setError(result.error || "Login failed. Please try again.");
+        setError(result.error || "Registration failed. Please try again.");
       }
     } catch (err) {
-      setError("Login failed. Please try again.");
+      setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -36,14 +36,14 @@ const Login: React.FC = () => {
         {/* Header matching your dashboard */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">Test Automation Dashboard</h1>
-          <p className="text-gray-400">Sign in to continue</p>
+          <p className="text-gray-400">Create your account</p>
         </div>
 
         <Card className="bg-gray-800 border-gray-700 shadow-xl">
           <CardContent className="p-8">
             <div className="flex items-center justify-center mb-6">
-              <LogIn className="w-8 h-8 text-blue-500 mr-2" />
-              <h2 className="text-2xl font-bold text-white">Login</h2>
+              <UserPlus className="w-8 h-8 text-blue-500 mr-2" />
+              <h2 className="text-2xl font-bold text-white">Register</h2>
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
@@ -63,10 +63,33 @@ const Login: React.FC = () => {
                 <input
                   id="username"
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="Choose a username (3-20 characters)"
                   value={form.username}
                   onChange={(e) => {
                     setForm({ ...form, username: e.target.value });
+                    setError(""); // Clear error on input change
+                  }}
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  minLength={3}
+                  maxLength={20}
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-300 mb-2"
+                >
+                  Email <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={form.email}
+                  onChange={(e) => {
+                    setForm({ ...form, email: e.target.value });
                     setError(""); // Clear error on input change
                   }}
                   className="w-full px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
@@ -84,13 +107,14 @@ const Login: React.FC = () => {
                 <input
                   id="password"
                   type="password"
-                  placeholder="Enter password"
+                  placeholder="Create a password (min 8 characters)"
                   value={form.password}
                   onChange={(e) => {
                     setForm({ ...form, password: e.target.value });
                     setError(""); // Clear error on input change
                   }}
                   className="w-full px-4 py-3 border border-gray-600 rounded-lg text-white bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+                  minLength={8}
                   required
                 />
               </div>
@@ -106,22 +130,22 @@ const Login: React.FC = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Signing In...
+                    Creating Account...
                   </div>
                 ) : (
-                  "Sign In"
+                  "Create Account"
                 )}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-gray-400 text-sm">
-                Don't have an account?{" "}
+                Already have an account?{" "}
                 <Link
-                  to="/register"
+                  to="/login"
                   className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
                 >
-                  Register here
+                  Sign in here
                 </Link>
               </p>
             </div>
@@ -136,4 +160,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Register;

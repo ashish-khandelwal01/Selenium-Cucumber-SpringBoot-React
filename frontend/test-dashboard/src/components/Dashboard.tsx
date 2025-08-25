@@ -7,6 +7,7 @@ import { useListReports } from '../hooks/useListTestRuns';
 import { useAllTestRuns } from '../hooks/useAllTestRuns';
 import { useActiveJobTracking } from '../hooks/useActiveJobTracking';
 import RunningJobsModal from './RunningJobsModal';
+import RunDetailsModal from './RunDetailsModalProps';
 import TestRunCard from './TestRunCard';
 import { formatDuration } from "../utils/RunCardUtil";
 import {
@@ -88,6 +89,8 @@ const Dashboard = () => {
       return runDate >= todayStart && run.status.includes('Failures');
     }).length;
   }, [runsReportList]);
+
+  const [selectedRun, setSelectedRun] = useState(null);
 
   return (
     <main className="flex-1 p-6 space-y-6 overflow-auto">
@@ -238,7 +241,6 @@ const Dashboard = () => {
                 <tr>
                   <th className="pb-2">Run ID</th>
                   <th className="pb-2">Status</th>
-                  <th className="pb-2">Triggered By</th>
                   <th className="pb-2">Duration</th>
                   <th className="pb-2">Started At</th>
                   <th className="pb-2"></th>
@@ -246,13 +248,19 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {runs.map((run) => (
-                  <TestRunCard key={run.runId} {...run} />
+                  <TestRunCard key={run.runId} {...run} onView={setSelectedRun}/>
                 ))}
               </tbody>
             </table>
           )}
         </CardContent>
       </Card>
+      {/* Run Details Card */}
+      <RunDetailsModal
+        isOpen={!!selectedRun}
+        onClose={() => setSelectedRun(null)}
+        run={selectedRun}
+      />
 
       {/* Running Jobs Modal */}
       <RunningJobsModal

@@ -16,7 +16,7 @@ import java.util.Optional;
 public interface JobTrackingService {
 
     SseEmitter createSseEmitter();
-    void broadcastJobUpdate();
+    void broadcastJobUpdate(JobTracking jobTracking);
 
     /**
      * Starts an asynchronous job with the given parameters.
