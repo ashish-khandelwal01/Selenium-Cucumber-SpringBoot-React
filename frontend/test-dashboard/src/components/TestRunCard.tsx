@@ -29,6 +29,7 @@ const TestRunCard = ({
   triggeredBy,
   durationSeconds,
   startTime,
+  onView,
 }: TestRunCardProps) => {
   const uiStatus = mapBackendStatusToUIStatus(status);
   const formattedDuration = formatDuration(durationSeconds);
@@ -42,7 +43,11 @@ const TestRunCard = ({
       <td className="py-2">{formattedDuration}</td>
       <td className="py-2">{formattedStartTime}</td>
       <td className="py-2">
-        <Button size="sm">View</Button>
+          <button size="sm"
+            onClick={() => onView({ runId, status, triggeredBy, durationSeconds, startTime })}
+          >
+            View
+          </button>
       </td>
     </tr>
   );

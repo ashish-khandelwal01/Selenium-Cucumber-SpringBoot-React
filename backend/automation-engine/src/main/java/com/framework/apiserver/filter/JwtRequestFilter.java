@@ -46,13 +46,21 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
 
+        String requestURI = request.getRequestURI();
+
+        // Skip JWT processing for permitted paths
+        if (isPermittedPath(requestURI)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         // Retrieve the JWT token from the request header
         final String requestTokenHeader = request.getHeader(jwtConfig.getHeaderString());
 
         String username = null;
         String jwtToken = null;
 
-        // Check if the token is in the correct format and extract it
+        // Check if the Authorization header exists and has the correct format
         if (requestTokenHeader != null && requestTokenHeader.startsWith(jwtConfig.getTokenPrefix())) {
             jwtToken = requestTokenHeader.substring(jwtConfig.getTokenPrefix().length());
             try {
@@ -63,8 +71,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             } catch (Exception e) {
                 logger.error("JWT Token has expired");
             }
-        } else {
-            logger.warn("JWT Token does not begin with Bearer String");
+        } else if (requestTokenHeader != null) {
+            logger.warn("JWT Token does not begin with the expected prefix");
         }
 
         // Validate the token and set the authentication context
@@ -85,5 +93,19 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
         // Continue the filter chain
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Check if the requested URI is in the list of paths that don't require JWT authentication.
+     *
+     * @param uri The request URI to check
+     * @return true if the path is permitted without authentication, false otherwise
+     */
+    private boolean isPermittedPath(String uri) {
+        return uri.startsWith("/api/auth/") ||
+                uri.startsWith("/api/public/") ||
+                uri.equals("/api/jobs/updates") ||
+                uri.startsWith("/swagger-ui/") ||
+                uri.startsWith("/v3/api-docs/");
     }
 }
