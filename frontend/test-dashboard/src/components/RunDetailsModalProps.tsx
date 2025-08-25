@@ -22,7 +22,6 @@ const RunDetailsModal = ({ isOpen, onClose, run }: RunDetailsModalProps) => {
           </div>
           <div className="mt-4 space-y-2 text-sm">
             <p><strong>Status:</strong> {run.status}</p>
-            <p><strong>Triggered By:</strong> {run.triggeredBy}</p>
             <p><strong>Duration:</strong> {formatDuration(run.durationSeconds)}</p>
             <p><strong>Started At:</strong> {new Date(run.startTime).toLocaleString()}</p>
           </div>
