@@ -5,9 +5,9 @@
  * @module failureHistoryApi
  */
 
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/history';
+const historyApi = createApi("/history");
 
 
 /**
@@ -17,7 +17,7 @@ const BASE_URL = 'http://localhost:8080/api/history';
  * @returns {Promise<Object>} A promise that resolves to the response data containing failed runs.
  */
 export const fetchFailureHistory = () =>
-    axios.get(`${BASE_URL}/failed-runs`);
+    historyApi.get(`/failed-runs`);
 
 
 /**
@@ -29,7 +29,7 @@ export const fetchFailureHistory = () =>
  * @returns {Promise<Object>} A promise that resolves to the API response containing failure history data.
  */
 export const fetchFailureHistoryByPages = ({ page, size }) => {
-  return axios.get(`${BASE_URL}/failed-runs/pages`, {
+  return historyApi.get(`/failed-runs/pages`, {
     params: {
       page,
       size,

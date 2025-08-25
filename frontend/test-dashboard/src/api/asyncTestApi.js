@@ -6,9 +6,10 @@
  * @module asyncTestApi
  */
  
-import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8080/api/tests'; // or your deployed Spring Boot server
+import { createApi } from "./createApi";
+
+const testsApi = createApi("/tests");
 
 /**
  * Initiates an asynchronous test run with the specified tags.
@@ -18,7 +19,7 @@ const BASE_URL = 'http://localhost:8080/api/tests'; // or your deployed Spring B
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the async test run request.
  */
 export const runAsync = (tags) => 
-    axios.post(`${BASE_URL}/async-run`, null, {
+    testsApi.post(`/async-run`, null, {
         params: { tags },
     });
 
@@ -30,7 +31,7 @@ export const runAsync = (tags) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the rerun request.
  */
 export const rerunAsync = (runId) => 
-    axios.post(`${BASE_URL}/async-rerun`, null, {
+    testsApi.post(`/async-rerun`, null, {
         params: { runId },
     });
 
@@ -42,7 +43,7 @@ export const rerunAsync = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} Axios promise resolving to the server response.
  */
 export const rerunFailedAsync = (runId) => 
-    axios.post(`${BASE_URL}/async-rerun/failed`, null, {
+    testsApi.post(`/async-rerun/failed`, null, {
         params: { runId },
     });
 
@@ -54,7 +55,7 @@ export const rerunFailedAsync = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves to the Axios response containing the job status.
  */
 export const getAsyncJobStatus = (jobId) => 
-    axios.get(`${BASE_URL}/status/${jobId}`);
+    testsApi.get(`/status/${jobId}`);
 
 /**
  * Cancels an asynchronous job by its ID.
@@ -64,4 +65,4 @@ export const getAsyncJobStatus = (jobId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the delete request.
  */
 export const cancelAsyncJob = (jobId) => 
-    axios.delete(`${BASE_URL}/cancel/${jobId}`);
+    testsApi.delete(`/cancel/${jobId}`);

@@ -11,13 +11,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
@@ -35,6 +40,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
     // List to manage active SSE emitters for real-time updates
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final Set<SseEmitter> activeEmitters = ConcurrentHashMap.newKeySet();
 
     // List of statuses considered as active
     private static final List<JobStatus> ACTIVE_STATUSES = List.of(
@@ -54,45 +60,90 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      */
     @Override
     public SseEmitter createSseEmitter() {
-        SseEmitter emitter = new SseEmitter(0L); // No timeout
+        SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout instead of infinite
+        activeEmitters.add(emitter);
         emitters.add(emitter);
 
-        // Send current job status immediately upon connection
-        try {
-            JobStatusSummary currentStatus = getJobStatusSummary();
-            Map<String, Object> data = new HashMap<>();
-            data.put("totalActiveJobs", currentStatus.getTotalActiveJobs());
-            data.put("asyncJobs", currentStatus.getAsyncJobs());
-            data.put("syncJobs", currentStatus.getSyncJobs());
-            data.put("timestamp", LocalDateTime.now().toString());
-
-            emitter.send(SseEmitter.event()
-                    .name("job-status-update")
-                    .data(data));
-
-            log.info("New SSE client connected. Current active jobs: {}", currentStatus.getTotalActiveJobs());
-        } catch (IOException e) {
-            log.error("Failed to send initial data to new SSE client", e);
+        Runnable cleanup = () -> {
+            activeEmitters.remove(emitter);
             emitters.remove(emitter);
-        }
+            log.debug("SSE client cleanup. Active connections: {}", emitters.size());
+        };
 
-        // Handle cleanup when client disconnects
-        emitter.onCompletion(() -> {
-            emitters.remove(emitter);
-            log.debug("SSE client disconnected. Active connections: {}", emitters.size());
-        });
-
-        emitter.onTimeout(() -> {
-            emitters.remove(emitter);
-            log.debug("SSE client timed out. Active connections: {}", emitters.size());
-        });
-
+        // Set up cleanup handlers first
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
         emitter.onError(throwable -> {
-            emitters.remove(emitter);
-            log.debug("SSE client error. Active connections: {}", emitters.size());
+            log.debug("SSE client error: {}", throwable.getMessage());
+            cleanup.run();
+        });
+
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+
+        CompletableFuture.supplyAsync(() -> {
+            SecurityContextHolder.setContext(securityContext);
+            try {
+                return this.getInitialJobStatusData();
+            } catch (Exception e) {
+                log.error("Error getting initial job status: {}", e.getMessage(), e);
+                return null;
+            }
+        }).thenAcceptAsync(currentStatus -> { // Use thenAcceptAsync to avoid blocking
+            if (currentStatus != null && activeEmitters.contains(emitter)) {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("job-status-update")
+                            .data(currentStatus));
+                    log.info("New SSE client connected. Current active jobs: {}",
+                            currentStatus.get("totalActiveJobs"));
+                } catch (Exception e) {
+                    log.error("Failed to send initial data to SSE client: {}", e.getMessage());
+                    cleanup.run();
+                }
+            }
+        }).exceptionally(throwable -> {
+            log.error("Error in async SSE initialization: {}", throwable.getMessage(), throwable);
+            cleanup.run();
+            return null;
         });
 
         return emitter;
+    }
+    /**
+     * Separate method to get initial job status data with proper transaction management.
+     * This method is called asynchronously to prevent connection leaks.
+     */
+    @Transactional(readOnly = true, timeout = 5, propagation = Propagation.REQUIRES_NEW)
+    public Map<String, Object> getInitialJobStatusData() {
+        try {
+            JobStatusSummary summary = getJobStatusSummaryInternal();
+            Map<String, Object> data = new HashMap<>();
+            data.put("totalActiveJobs", summary.getTotalActiveJobs());
+            data.put("asyncJobs", summary.getAsyncJobs());
+            data.put("syncJobs", summary.getSyncJobs());
+            data.put("timestamp", LocalDateTime.now().toString());
+            return data;
+        } catch (Exception e) {
+            log.error("Error in getInitialJobStatusData: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Internal method for getting job status summary - separated to avoid transaction conflicts.
+     */
+    private JobStatusSummary getJobStatusSummaryInternal() {
+        List<JobTracking> activeJobs = jobTrackingRepository.findActiveJobsOrderByStartTime(ACTIVE_STATUSES);
+
+        Map<JobType, Long> jobsByType = activeJobs.stream()
+                .collect(Collectors.groupingBy(JobTracking::getType, Collectors.counting()));
+
+        return JobStatusSummary.builder()
+                .totalActiveJobs(activeJobs.size())
+                .asyncJobs(jobsByType.getOrDefault(JobType.ASYNC, 0L).intValue())
+                .syncJobs(jobsByType.getOrDefault(JobType.SYNC, 0L).intValue())
+                .activeJobs(activeJobs)
+                .build();
     }
 
     /**
@@ -100,38 +151,63 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * Removes any emitters that fail to receive the update.
      */
     @Override
-    public void broadcastJobUpdate() {
+    public void broadcastJobUpdate(JobTracking jobTracking) {
         if (emitters.isEmpty()) {
-            return; // No clients connected
+            return;
         }
 
-        JobStatusSummary status = getJobStatusSummary();
-        Map<String, Object> data = new HashMap<>();
-        data.put("totalActiveJobs", status.getTotalActiveJobs());
-        data.put("asyncJobs", status.getAsyncJobs());
-        data.put("syncJobs", status.getSyncJobs());
-        data.put("timestamp", LocalDateTime.now().toString());
+        Map<String, Object> jobData = new HashMap<>();
+        jobData.put("type", "job");
+        jobData.put("jobId", jobTracking.getJobId());
+        jobData.put("status", jobTracking.getStatus());
+        jobData.put("errorMessage", jobTracking.getErrorMessage());
+        jobData.put("timestamp", LocalDateTime.now().toString());
 
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-
-        for (SseEmitter emitter : emitters) {
+        // Use async processing for broadcast as well to prevent connection leaks
+        CompletableFuture.supplyAsync(() -> {
             try {
-                emitter.send(SseEmitter.event()
-                        .name("job-status-update")
-                        .data(data));
-            } catch (IOException e) {
-                log.debug("Failed to send update to SSE client, removing from list", e);
-                deadEmitters.add(emitter);
+                return this.getInitialJobStatusData();
+            } catch (Exception e) {
+                log.error("Error getting job status for broadcast: {}", e.getMessage(), e);
+                return null;
             }
-        }
+        }).thenAcceptAsync(summaryData -> {
+            // Create a copy of active emitters to avoid concurrent modification
+            Set<SseEmitter> currentEmitters = new HashSet<>(activeEmitters);
+            List<SseEmitter> deadEmitters = new ArrayList<>();
 
-        // Remove dead emitters
-        emitters.removeAll(deadEmitters);
+            for (SseEmitter emitter : currentEmitters) {
+                try {
+                    // Send job update
+                    emitter.send(SseEmitter.event()
+                            .name("job-status-update")
+                            .data(jobData));
 
-        if (!deadEmitters.isEmpty()) {
-            log.debug("Removed {} dead SSE connections. Active connections: {}",
-                    deadEmitters.size(), emitters.size());
-        }
+                    // Send summary update if available
+                    if (summaryData != null) {
+                        Map<String, Object> summaryEvent = new HashMap<>(summaryData);
+                        summaryEvent.put("type", "summary");
+                        emitter.send(SseEmitter.event()
+                                .name("job-status-update")
+                                .data(summaryEvent));
+                    }
+                } catch (Exception e) {
+                    log.debug("Failed to send update to SSE client: {}", e.getMessage());
+                    deadEmitters.add(emitter);
+                }
+            }
+
+            // Clean up dead emitters
+            if (!deadEmitters.isEmpty()) {
+                activeEmitters.removeAll(deadEmitters);
+                emitters.removeAll(deadEmitters);
+                log.debug("Removed {} dead SSE emitters. Active connections: {}",
+                        deadEmitters.size(), emitters.size());
+            }
+        }).exceptionally(throwable -> {
+            log.error("Error in broadcast async processing: {}", throwable.getMessage(), throwable);
+            return null;
+        });
     }
 
     /**
@@ -143,7 +219,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional(timeout = 30)
+    @Transactional(timeout = 5)
     public String startAsyncJob(String runId, String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -159,7 +235,6 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
         jobTrackingRepository.save(jobTracking);
         eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "CREATED"));
-        broadcastJobUpdate();
         log.info("Started async job: {} for runId: {} with tag: {}", jobId, runId, tag);
         return jobId;
     }
@@ -172,7 +247,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return The unique identifier of the started job.
      */
     @Override
-    @Transactional(timeout = 30)
+    @Transactional(timeout = 5)
     public String startSyncJob(String tag, String createdBy) {
         String jobId = UUID.randomUUID().toString();
 
@@ -189,7 +264,6 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
         jobTrackingRepository.save(jobTracking);
         eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "CREATED"));
-        broadcastJobUpdate();
         log.info("Started sync job: {} with tag: {}", jobId, tag);
         return jobId;
     }
@@ -213,7 +287,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @param errorMessage The error message, if any, associated with the job.
      */
     @Override
-    @Transactional(timeout = 30)
+    @Transactional(timeout = 10, propagation = Propagation.REQUIRED)
     public void updateJobStatus(String jobId, JobStatus status, String errorMessage) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -236,7 +310,6 @@ public class JobTrackingServiceImpl implements JobTrackingService {
 
             jobTrackingRepository.save(jobTracking);
             eventPublisher.publishEvent(new JobStatusChangedEvent(jobTracking, "UPDATED"));
-            broadcastJobUpdate();
             log.info("Updated job {} status from {} to {}", jobId, oldStatus, status);
         } else {
             log.warn("Attempted to update non-existent job: {}", jobId);
@@ -275,6 +348,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return True if the job was successfully cancelled, false otherwise.
      */
     @Override
+    @Transactional(timeout = 10)
     public boolean cancelJob(String jobId) {
         Optional<JobTracking> optionalJob = jobTrackingRepository.findById(jobId);
 
@@ -303,18 +377,9 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return A JobStatusSummary object containing the summary of active jobs.
      */
     @Override
+    @Transactional(readOnly = true, timeout = 10)
     public JobStatusSummary getJobStatusSummary() {
-        List<JobTracking> activeJobs = jobTrackingRepository.findActiveJobsOrderByStartTime(ACTIVE_STATUSES);
-
-        Map<JobType, Long> jobsByType = activeJobs.stream()
-                .collect(Collectors.groupingBy(JobTracking::getType, Collectors.counting()));
-
-        return JobStatusSummary.builder()
-                .totalActiveJobs(activeJobs.size())
-                .asyncJobs(jobsByType.getOrDefault(JobType.ASYNC, 0L).intValue())
-                .syncJobs(jobsByType.getOrDefault(JobType.SYNC, 0L).intValue())
-                .activeJobs(activeJobs)
-                .build();
+        return getJobStatusSummaryInternal();
     }
 
     /**
@@ -323,6 +388,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return A list of JobTracking entities representing active jobs.
      */
     @Override
+    @Transactional(readOnly = true, timeout = 10)
     public List<JobTracking> getActiveJobs() {
         return jobTrackingRepository.findActiveJobsOrderByStartTime(ACTIVE_STATUSES);
     }
@@ -334,6 +400,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return A list of JobTracking entities matching the tag.
      */
     @Override
+    @Transactional(readOnly = true, timeout = 10)
     public List<JobTracking> getJobsByTag(String tag) {
         return jobTrackingRepository.findByTagAndStatusIn(tag, ACTIVE_STATUSES);
     }
@@ -345,6 +412,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return An Optional containing the JobTracking entity if found, or empty if not found.
      */
     @Override
+    @Transactional(readOnly = true, timeout = 10)
     public Optional<JobTracking> getJobById(String jobId) {
         return jobTrackingRepository.findById(jobId);
     }
@@ -356,6 +424,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      * @return A list of JobTracking entities matching the run ID.
      */
     @Override
+    @Transactional(readOnly = true, timeout = 10)
     public List<JobTracking> getJobsByRunId(String runId) {
         return jobTrackingRepository.findByRunIdAndStatusIn(runId, ACTIVE_STATUSES);
     }
@@ -367,7 +436,7 @@ public class JobTrackingServiceImpl implements JobTrackingService {
      */
     @Override
     @Scheduled(fixedRate = 3600000) // 1 hour
-    @Transactional(timeout = 5)
+    @Transactional(timeout = 10)
     public void cleanupOldJobs() {
         LocalDateTime cutoffTime = LocalDateTime.now().minusHours(24);
 

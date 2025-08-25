@@ -6,9 +6,10 @@
  * @module testRerunApi
  */
  
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/tests/rerun'; // or your deployed Spring Boot server
+const testRerunApi = createApi("/tests/rerun");
+
 
 /**
  * Sends a POST request to rerun tests for a specific test run.
@@ -18,7 +19,7 @@ const BASE_URL = 'http://localhost:8080/api/tests/rerun'; // or your deployed Sp
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the rerun request.
  */
 export const rerunTests = (runId) =>
-    axios.post(`${BASE_URL}`, null, {
+    testRerunApi.post(``, null, {
         params: { runId },
     });
     
@@ -30,6 +31,6 @@ export const rerunTests = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the failed tests rerun request.
  */
 export const rerunFailedTests = (runId) =>
-    axios.post(`${BASE_URL}/failed`, null, {
+    testRerunApi.post(`/failed`, null, {
         params: { runId },
     });

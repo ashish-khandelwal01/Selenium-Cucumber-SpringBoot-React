@@ -20,6 +20,7 @@
 	<properties>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
+        <java.version>21</java.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<cucumber.version>7.22.0</cucumber.version>
 	</properties>
@@ -209,7 +210,6 @@
 			<groupId>org.hamcrest</groupId>
 			<artifactId>hamcrest</artifactId>
 			<version>3.0</version>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -284,7 +284,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>4.0.0-M1</version>
+				<version>3.5.4</version>
 			</plugin>
 			<!-- Maven Compiler Plugin -->
 			<plugin>
@@ -294,6 +294,7 @@
 				<configuration>
 					<source>21</source>
 					<target>21</target>
+                    <release>21</release>
 					<compilerArgs>
 						<arg>--enable-preview</arg>
 						<arg>-parameters</arg>

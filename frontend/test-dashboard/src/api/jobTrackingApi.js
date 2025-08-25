@@ -6,18 +6,33 @@
  * @module jobTrackingApi
  */
 
-import axios from 'axios';
+import { createApi } from "./createApi";
 
-const BASE_URL = 'http://localhost:8080/api/jobs'; // or your deployed Spring Boot server
+const jobsApi = createApi("/jobs");
+// Use relative URL to leverage Vite proxy
+const BASE_URL = '/api/jobs';
 
 /**
- * Creates an SSE connection for real-time job updates.
+ * Get authentication token from localStorage
+ */
+const getAuthToken = () => {
+    try {
+        const authData = JSON.parse(localStorage.getItem("authTokens"));
+        return authData?.token;
+    } catch (error) {
+        console.error('Failed to get auth token:', error);
+        return null;
+    }
+};
+
+/**
+ * Creates a fetch-based SSE connection for real-time job updates.
  *
  * @function createSSEConnection
  * @param {Function} onMessage - Callback function to handle incoming messages
  * @param {Function} onError - Callback function to handle connection errors
  * @param {Function} onOpen - Callback function to handle connection open
- * @returns {EventSource} The EventSource instance
+ * @returns {Promise<Object>} The SSE connection object with close method
  */
 export const createSSEConnection = (onMessage, onError, onOpen) => {
     const eventSource = new EventSource(`${BASE_URL}/updates`);
@@ -44,7 +59,7 @@ export const createSSEConnection = (onMessage, onError, onOpen) => {
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response containing job status summary.
  */
 export const getJobStatusSummary = () =>
-    axios.get(`${BASE_URL}/status`);
+    jobsApi.get(`/status`);
 
 /**
  * Retrieves a list of active jobs.
@@ -53,7 +68,7 @@ export const getJobStatusSummary = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response containing active jobs.
  */
 export const getActiveJobs = () =>
-    axios.get(`${BASE_URL}/active`);
+    jobsApi.get(`/active`);
 
 /**
  * Retrieves job details by job ID.
@@ -63,7 +78,7 @@ export const getActiveJobs = () =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response containing job details.
  */
 export const getJobByJobId = (jobId) =>
-    axios.get(`${BASE_URL}/${jobId}`);
+    jobsApi.get(`/${jobId}`);
 
 /**
  * Retrieves jobs by tag.
@@ -73,7 +88,7 @@ export const getJobByJobId = (jobId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response containing jobs with the specified tag.
  */
 export const getJobByTag = (tag) =>
-    axios.get(`${BASE_URL}/by-tag/${tag}`);
+    jobsApi.get(`/by-tag/${tag}`);
 
 /**
  * Retrieves job details by run ID.
@@ -83,7 +98,7 @@ export const getJobByTag = (tag) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response containing job details for the run.
  */
 export const getJobByRunId = (runId) =>
-    axios.get(`${BASE_URL}/by-run/${runId}`);
+    jobsApi.get(`/by-run/${runId}`);
 
 /**
  * Cancels a job by its ID.
@@ -93,10 +108,9 @@ export const getJobByRunId = (runId) =>
  * @returns {Promise<import('axios').AxiosResponse>} A promise that resolves with the response of the cancel request.
  */
 export const cancelJob = (jobId) =>
-    axios.post(`${BASE_URL}/${jobId}/cancel`, null, {
+    jobsApi.post(`/${jobId}/cancel`, null, {
         params: { jobId: jobId },
     });
-
 
 /**
  * Utility function to handle SSE connection with automatic reconnection.
