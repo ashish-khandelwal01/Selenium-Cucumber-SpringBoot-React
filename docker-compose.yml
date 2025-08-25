@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: automation_engine_cucumber_react
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
   
   backend:
     container_name: springboot-backend
@@ -29,6 +31,8 @@ services:
       - .env
     depends_on:
       - postgres
+    networks:
+      - app-net
 
   frontend:
     container_name: react-frontend
@@ -46,6 +50,12 @@ services:
     tty: true
     depends_on:
       - backend
+    networks:
+      - app-net
 
 volumes:
   postgres_data:
+
+networks:
+  app-net:
+    driver: bridge
