@@ -106,6 +106,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 uri.startsWith("/api/public/") ||
                 uri.equals("/api/jobs/updates") ||
                 uri.startsWith("/swagger-ui/") ||
-                uri.startsWith("/v3/api-docs/");
+                uri.startsWith("/v3/api-docs/") ||
+                uri.startsWith("/actuator/health") ||
+                uri.equals("/api/health");
     }
 }
