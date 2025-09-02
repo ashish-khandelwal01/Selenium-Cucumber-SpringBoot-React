@@ -53,6 +53,7 @@ public class DriverManager {
     public WebDriver getDriver() {
         if (currentDriver == null) {
             currentDriver = seleniumTestBase.browserSetup();
+            seleniumTestBase.setDriver(currentDriver);
         }
         return currentDriver;
     }
@@ -70,6 +71,7 @@ public class DriverManager {
             } catch (Exception ignored) {}
         }
         currentDriver = seleniumTestBase.browserSetup();
+        seleniumTestBase.setDriver(currentDriver);
         return currentDriver;
     }
 

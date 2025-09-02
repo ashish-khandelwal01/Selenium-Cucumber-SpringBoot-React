@@ -112,7 +112,7 @@ public class SeleniumTestBase {
 
                     if ("headless".equalsIgnoreCase(browserMode)) {
                         chromeOptions.addArguments("--headless");
-                        chromeOptions.addArguments("--window-size=1600,900");
+                        chromeOptions.addArguments("--window-size=1920,1080");
                         chromeOptions.addArguments("--no-sandbox");
                         chromeOptions.addArguments("--disable-dev-shm-usage");
                         chromeOptions.addArguments("--disable-gpu");
@@ -129,11 +129,20 @@ public class SeleniumTestBase {
                 case "firefox":
                     FirefoxOptions firefoxOptions = new FirefoxOptions();
                     if (browserPref != null) {
-                        firefoxOptions.addPreference("prefs", browserPref); // Firefox preferences
+                        firefoxOptions.addPreference("browser.download.dir", "src/test/resources/downloads/");
+                        firefoxOptions.addPreference("browser.download.folderList", 2);
+                        firefoxOptions.addPreference("browser.download.useDownloadDir", true);
+                        firefoxOptions.addPreference("browser.download.manager.showWhenStarting", false);
+                        firefoxOptions.addPreference("browser.helperApps.neverAsk.saveToDisk", "application/pdf");
+                        firefoxOptions.addPreference("pdfjs.disabled", true);
+
+                        firefoxOptions.addPreference("profile.default_content_setting_value.notifications", 2);
+                        firefoxOptions.addPreference("signon.rememberSignons", false);
                     }
                     if ("headless".equalsIgnoreCase(browserMode)) {
                         firefoxOptions.addArguments("--headless");
-                        firefoxOptions.addArguments("--window-size=1600,900");
+                        firefoxOptions.addArguments("--width=1920");
+                        firefoxOptions.addArguments("--height=1080");
                     }
 
                     if (useGrid) {
@@ -158,7 +167,7 @@ public class SeleniumTestBase {
                         edgeOptions.addArguments("--headless");
                         edgeOptions.addArguments("--no-sandbox");
                         edgeOptions.addArguments("--disable-dev-shm-usage");
-                        edgeOptions.addArguments("--window-size=1600,900");
+                        edgeOptions.addArguments("--window-size=1920,1080");
                         edgeOptions.addArguments("--disable-gpu");
                     }
 

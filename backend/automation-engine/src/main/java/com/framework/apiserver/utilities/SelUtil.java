@@ -174,7 +174,7 @@ public class SelUtil {
     public WebElement fluentWaitVisibilityOfElementLocated(WebElement element, int timeout) {
         return new FluentWait<>(getDriver())
                 .withTimeout(Duration.ofSeconds(timeout))
-                .pollingEvery(Duration.ofSeconds(5))
+                .pollingEvery(Duration.ofSeconds(1))
                 .ignoring(NoSuchElementException.class)
                 .until(ExpectedConditions.visibilityOf(element));
     }
@@ -189,7 +189,7 @@ public class SelUtil {
     public WebElement fluentWaitElementToBeClickable(WebElement element, int timeout) {
         return new FluentWait<>(getDriver())
                 .withTimeout(Duration.ofSeconds(timeout))
-                .pollingEvery(Duration.ofSeconds(5))
+                .pollingEvery(Duration.ofSeconds(1))
                 .ignoring(NoSuchElementException.class)
                 .until(ExpectedConditions.elementToBeClickable(element));
     }
