@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import RunTests from "./pages/RunTests";
@@ -9,6 +9,23 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { BrowserProvider } from './context/BrowserContext';
+
+// Layout component for protected pages
+const ProtectedLayout = () => {
+  return (
+    <ProtectedRoute>
+      <BrowserProvider>
+        <div className="app-layout">
+          <Navbar />
+          <main className="main-content">
+            <Outlet />
+          </main>
+        </div>
+      </BrowserProvider>
+    </ProtectedRoute>
+  );
+};
 
 function App() {
   return (
@@ -19,15 +36,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Navbar />
-              </ProtectedRoute>
-            }
-          >
+          {/* Protected routes with shared layout */}
+          <Route path="/" element={<ProtectedLayout />}>
             <Route index element={<Home />} />
             <Route path="run-tests" element={<RunTests />} />
             <Route path="rerun-failed" element={<RerunFailed />} />

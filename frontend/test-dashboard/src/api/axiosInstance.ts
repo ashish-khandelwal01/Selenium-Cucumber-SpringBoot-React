@@ -4,20 +4,25 @@ const axiosInstance = axios.create({
   baseURL: "http://localhost:8080/api",
 });
 
-// Attach access token to every request (if available)
+// COMBINED REQUEST INTERCEPTOR - handles both auth and browser
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Handle authentication token
     const tokens = localStorage.getItem("authTokens");
     if (tokens) {
       const { token } = JSON.parse(tokens);
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Handle browser selection
+    const browser = localStorage.getItem('selectedBrowser') || 'chrome';
+    config.headers['X-Browser-Type'] = browser;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Optional: Auto-handle token refresh on 401 responses
+// Response interceptor for token refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -39,6 +44,11 @@ axiosInstance.interceptors.response.use(
 
           // Update header and retry request
           originalRequest.headers.Authorization = `Bearer ${newTokens.token}`;
+
+          // IMPORTANT: Re-add browser header for retry request
+          const browser = localStorage.getItem('selectedBrowser') || 'chrome';
+          originalRequest.headers['X-Browser-Type'] = browser;
+
           return axiosInstance(originalRequest);
         }
       } catch (refreshError) {

@@ -36,3 +36,4 @@
 **/*.sln
 **/*.sw?
 .env
+**/screenshots/**
