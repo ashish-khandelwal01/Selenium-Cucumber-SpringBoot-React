@@ -56,9 +56,6 @@ public class SeleniumTestBase {
     @Getter
     protected WebDriver driver;
 
-    @Value("${browser}")
-    private String browser;
-
     @Value("${browser_mode}")
     private String browserMode;
 
@@ -88,7 +85,7 @@ public class SeleniumTestBase {
      * @return The WebDriver instance.
      * @throws IllegalArgumentException if the browser is not supported.
      */
-    public WebDriver browserSetup() {
+    public WebDriver browserSetup(String browser) {
         WebDriver driver = null;
         String gridUrl = System.getenv("GRID_URL");
         System.out.println("GRID URL: " + gridUrl);

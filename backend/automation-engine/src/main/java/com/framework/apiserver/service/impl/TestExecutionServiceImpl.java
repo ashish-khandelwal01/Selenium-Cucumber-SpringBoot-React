@@ -1,6 +1,7 @@
 package com.framework.apiserver.service.impl;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
+import com.framework.apiserver.service.BrowserContextManager;
 import com.framework.apiserver.service.JobTrackingService;
 import com.framework.apiserver.service.TestExecutionService;
 import com.framework.apiserver.service.TestRunInfoService;
@@ -44,6 +45,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
     private JobTrackingService jobTrackingService;
 
     @Autowired
+    BrowserContextManager browserContextManager;
+
+    @Autowired
     private TestRunInfoService testRunInfoService;
 
     /**
@@ -66,7 +70,7 @@ public class TestExecutionServiceImpl implements TestExecutionService {
         }
         try {
             // Command to launch a new JVM process
-            CommonUtils.testCaseRun(tag, runId, Path.of("."));
+            CommonUtils.testCaseRun(tag, runId, Path.of("."), browserContextManager.getBrowserType());
 
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();

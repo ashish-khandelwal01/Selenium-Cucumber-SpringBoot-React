@@ -3,10 +3,7 @@ package com.framework.apiserver.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.framework.apiserver.dto.TestExecutionResponse;
-import com.framework.apiserver.service.JobTrackingService;
-import com.framework.apiserver.service.TestExecutionService;
-import com.framework.apiserver.service.TestRerunService;
-import com.framework.apiserver.service.TestRunInfoService;
+import com.framework.apiserver.service.*;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +31,9 @@ public class TestRerunServiceImpl implements TestRerunService {
 
     @Autowired
     private TestExecutionService testExecutionService;
+
+    @Autowired
+    private BrowserContextManager browserContextManager;
 
     @Autowired
     private TestRunInfoService testRunInfoService;
@@ -99,7 +99,7 @@ public class TestRerunServiceImpl implements TestRerunService {
             Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
             asyncJobManager.setJobRunning(jobId);
             Files.write(rerunFilePath, failedScenarioPathsWithLines);
-            CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
+            CommonUtils.testCaseRun(null, newRunId, rerunFilePath, browserContextManager.getBrowserType());
             commonUtils.deleteFile(rerunFilePath.toString());
             LocalDateTime endTime = LocalDateTime.now();
             long durationSeconds = Duration.between(startTime, endTime).getSeconds();
@@ -213,7 +213,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                 LocalDateTime startTime = LocalDateTime.now();
                 Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
                 Files.write(rerunFilePath, failedScenarioPathsWithLines);
-                CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
+                CommonUtils.testCaseRun(null, newRunId, rerunFilePath, browserContextManager.getBrowserType());
                 commonUtils.deleteFile(rerunFilePath.toString());
 
                 LocalDateTime endTime = LocalDateTime.now();
@@ -259,7 +259,7 @@ public class TestRerunServiceImpl implements TestRerunService {
                 LocalDateTime startTime = LocalDateTime.now();
                 Path rerunFilePath = Paths.get("reports/"+runId+"/rerun.txt");
                 Files.write(rerunFilePath, failedScenarioPathsWithLines);
-                CommonUtils.testCaseRun(null, newRunId, rerunFilePath);
+                CommonUtils.testCaseRun(null, newRunId, rerunFilePath, browserContextManager.getBrowserType());
                 commonUtils.deleteFile(rerunFilePath.toString());
 
                 LocalDateTime endTime = LocalDateTime.now();
