@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class BookStoreDemoStepDefinitions {
 
+    private final BrowserStepDefinitions browserStepDefinitions;
     private final DriverManager driverManager;
     private final BaseClass baseClass;
     private final TestExecutionService testService;
@@ -55,10 +56,12 @@ public class BookStoreDemoStepDefinitions {
      * @param selUtil The SelUtil instance for Selenium utility methods.
      */
     @Autowired
-    public BookStoreDemoStepDefinitions(DriverManager driverManager,
+    public BookStoreDemoStepDefinitions(BrowserStepDefinitions browserStepDefinitions,
+                                        DriverManager driverManager,
                                         BaseClass baseClass,
                                         TestExecutionService testService,
                                         SelUtil selUtil) {
+        this.browserStepDefinitions = browserStepDefinitions;
         this.driverManager = driverManager;
         this.baseClass = baseClass;
         this.testService = testService;
@@ -69,8 +72,8 @@ public class BookStoreDemoStepDefinitions {
      * Initializes the page objects with the current WebDriver instance.
      */
     private void initDriverAndPages() {
-        loginPage = new LoginPage(driver, selUtil);
-        bookStorePage = new BookStorePage(driver, selUtil);
+        loginPage = new LoginPage(browserStepDefinitions.getDriver(), selUtil);
+        bookStorePage = new BookStorePage(browserStepDefinitions.getDriver(), selUtil);
     }
 
     /**
@@ -81,16 +84,6 @@ public class BookStoreDemoStepDefinitions {
             driver = driverManager.getDriver();
             initDriverAndPages();
         }
-    }
-
-    /**
-     * Creates a new browser instance and initializes the page objects.
-     */
-    @Given("User wants to create a new browser instance")
-    public void userCreatesNewBrowser() {
-        this.driver = driverManager.createNewDriver();
-        initDriverAndPages();
-        baseClass.infoLog("Created new browser instance");
     }
 
     /**

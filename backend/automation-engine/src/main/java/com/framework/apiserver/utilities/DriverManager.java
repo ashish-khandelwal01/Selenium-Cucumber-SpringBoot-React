@@ -1,5 +1,7 @@
 package com.framework.apiserver.utilities;
 
+import com.framework.apiserver.service.BrowserContextManager;
+import lombok.Getter;
 import org.openqa.selenium.WebDriver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -34,10 +36,21 @@ public class DriverManager {
     // Holds the current active driver instance
     private WebDriver currentDriver;
 
+    @Autowired
+    private BrowserContextManager browserContextManager;
+
+    /**
+     * -- GETTER --
+     *  Gets the browser type that the current driver was created for.
+     *
+     * @return The current browser type, or null if no driver exists.
+     */
+    // Track which browser type the current driver was created for
+    @Getter
+    private String currentBrowserType;
+
     /**
      * Constructs a DriverManager instance with the required SeleniumTestBase dependency.
-     *
-     * @param seleniumTestBase The SeleniumTestBase instance used for browser setup.
      */
     @Autowired
     public DriverManager(SeleniumTestBase seleniumTestBase) {
@@ -46,14 +59,30 @@ public class DriverManager {
 
     /**
      * Retrieves the current WebDriver instance.
-     * If no instance exists, a new one is created using SeleniumTestBase.
+     * If no instance exists or browser type has changed, a new one is created.
      *
      * @return The current WebDriver instance.
      */
-    public WebDriver getDriver() {
-        if (currentDriver == null) {
-            currentDriver = seleniumTestBase.browserSetup();
+    public synchronized WebDriver getDriver() {
+        String requestedBrowserType = System.getProperty("browserName");
+        // Create new driver if none exists or browser type changed
+        if (currentDriver == null || !requestedBrowserType.equals(currentBrowserType)) {
+            if (currentDriver != null) {
+                try {
+                    currentDriver.quit();
+                } catch (Exception e) {
+                    System.out.println("Error closing previous driver: " + e.getMessage());
+                }
+                currentDriver = null;
+            }
+
+            currentDriver = seleniumTestBase.browserSetup(requestedBrowserType);
+            seleniumTestBase.setDriver(currentDriver);
+            currentBrowserType = requestedBrowserType;
+        } else {
+            System.out.println("DriverManager: Reusing existing " + currentBrowserType + " WebDriver instance");
         }
+
         return currentDriver;
     }
 
@@ -63,13 +92,19 @@ public class DriverManager {
      *
      * @return The newly created WebDriver instance.
      */
-    public WebDriver createNewDriver() {
+    public synchronized WebDriver createNewDriver() {
         if (currentDriver != null) {
             try {
                 currentDriver.quit();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.out.println("Error closing existing driver: " + e.getMessage());
+            }
         }
-        currentDriver = seleniumTestBase.browserSetup();
+
+        String browserType = System.getProperty("browserName");
+        currentDriver = seleniumTestBase.browserSetup(browserType);
+        seleniumTestBase.setDriver(currentDriver);
+        currentBrowserType = browserType;
         return currentDriver;
     }
 
@@ -77,12 +112,16 @@ public class DriverManager {
      * Closes the current WebDriver instance and sets it to null.
      * Ensures proper cleanup of resources.
      */
-    public void quitDriver() {
+    public synchronized void quitDriver() {
         if (currentDriver != null) {
             try {
                 currentDriver.quit();
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                System.out.println("Error quitting driver: " + e.getMessage());
+            }
             currentDriver = null;
+            currentBrowserType = null;
         }
     }
+
 }

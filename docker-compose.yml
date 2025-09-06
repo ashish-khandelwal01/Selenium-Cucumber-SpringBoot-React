@@ -11,12 +11,22 @@ services:
       POSTGRES_DB: automation_engine_cucumber_react
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+      - selenium-net  # Connect to selenium network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
   
   backend:
     container_name: springboot-backend
     build:
       context: ./backend/automation-engine
       dockerfile: DockerFile
+    platform: linux/arm64
     ports:
       - "8080:8080"
     volumes:
@@ -25,16 +35,28 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/automation_engine_cucumber_react
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: admin
+      GRID_URL: http://selenium-hub:4444/wd/hub
     env_file:
       - .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-net
+      - selenium-net  # Connect to selenium network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
   frontend:
     container_name: react-frontend
     build:
       context: ./frontend/test-dashboard
       dockerfile: DockerFile
+    platform: linux/arm64
     ports:
       - "3000:3000"
     volumes:
@@ -42,10 +64,29 @@ services:
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8080
     stdin_open: true
     tty: true
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   postgres_data:
+    external: true
+    name: java-selenium-cucumber-react_postgres_data
+
+networks:
+  app-net:
+    driver: bridge
+  selenium-net:
+    external: true
+    name: selenium_selenium-net

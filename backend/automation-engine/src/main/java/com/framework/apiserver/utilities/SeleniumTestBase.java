@@ -13,12 +13,17 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 
 /**
@@ -51,9 +56,6 @@ public class SeleniumTestBase {
     @Getter
     protected WebDriver driver;
 
-    @Value("${browser}")
-    private String browser;
-
     @Value("${browser_mode}")
     private String browserMode;
 
@@ -83,56 +85,165 @@ public class SeleniumTestBase {
      * @return The WebDriver instance.
      * @throws IllegalArgumentException if the browser is not supported.
      */
-    public WebDriver browserSetup() {
-        switch (browser.toLowerCase()) {
-            case "chrome":
-                ChromeOptions chromeOptions = new ChromeOptions();
-                chromeOptions.addArguments("--disable-features=PasswordCheck,AutofillKeyedData,SafeBrowsingEnhancedProtection");
-                chromeOptions.addArguments("--disable-sync");
-                chromeOptions.addArguments("--start-maximized");
-                chromeOptions.addArguments("--disable-infobars");
-                chromeOptions.addArguments("--disable-extensions");
-                chromeOptions.addArguments("--disable-popup-blocking");
-                chromeOptions.setExperimentalOption("prefs", browserPref);
+    public WebDriver browserSetup(String browser) {
+        WebDriver driver = null;
+        String gridUrl = System.getenv("GRID_URL");
+        System.out.println("GRID URL: " + gridUrl);
+        try {
+            boolean useGrid = useGrid(gridUrl);
+            System.out.println("Browser: " + browser + ", Mode: " + browserMode + ", Using Grid: " + useGrid);
+            String b = browser.toLowerCase();
 
-                if ("headless".equalsIgnoreCase(browserMode)) {
-                    chromeOptions.addArguments("--headless");
-                    chromeOptions.addArguments("--window-size=1600,900");
-                    chromeOptions.addArguments("--no-sandbox");
-                    chromeOptions.addArguments("--disable-dev-shm-usage");
-                    chromeOptions.addArguments("--disable-gpu");
-                }
+            switch (b) {
+                case "chrome":
+                    ChromeOptions chromeOptions = new ChromeOptions();
+                    chromeOptions.addArguments("--disable-features=PasswordCheck,AutofillKeyedData,SafeBrowsingEnhancedProtection");
+                    chromeOptions.addArguments("--disable-sync");
+                    chromeOptions.addArguments("--start-maximized");
+                    chromeOptions.addArguments("--disable-infobars");
+                    chromeOptions.addArguments("--disable-extensions");
+                    chromeOptions.addArguments("--disable-popup-blocking");
+                    if (browserPref != null) {
+                        chromeOptions.setExperimentalOption("prefs", browserPref);
+                    }
 
-                driver = new ChromeDriver(chromeOptions);
-                break;
+                    if ("headless".equalsIgnoreCase(browserMode)) {
+                        chromeOptions.addArguments("--headless");
+                        chromeOptions.addArguments("--window-size=1920,1080");
+                        chromeOptions.addArguments("--no-sandbox");
+                        chromeOptions.addArguments("--disable-dev-shm-usage");
+                        chromeOptions.addArguments("--disable-gpu");
+                    }
 
-            case "edge":
-                EdgeOptions edgeOptions = new EdgeOptions();
-                edgeOptions.addArguments("--start-maximized");
-                edgeOptions.addArguments("--disable-infobars");
-                edgeOptions.addArguments("--disable-extensions");
-                edgeOptions.addArguments("--disable-popup-blocking");
-                edgeOptions.setExperimentalOption("prefs", browserPref);
+                    if (useGrid) {
+                        driver = new RemoteWebDriver(new URL(gridUrl), chromeOptions);
+                        System.out.println("Running tests on Selenium Grid: " + gridUrl);
+                    } else {
+                        driver = new ChromeDriver(chromeOptions);
+                    }
+                    break;
 
-                if ("headless".equalsIgnoreCase(browserMode)) {
-                    edgeOptions.addArguments("--headless");
-                    edgeOptions.addArguments("--no-sandbox");
-                    edgeOptions.addArguments("--disable-dev-shm-usage");
-                    edgeOptions.addArguments("--window-size=1600,900");
-                    edgeOptions.addArguments("--disable-gpu");
-                }
+                case "firefox":
+                    FirefoxOptions firefoxOptions = new FirefoxOptions();
+                    if (browserPref != null) {
+                        firefoxOptions.addPreference("browser.download.dir", "src/test/resources/downloads/");
+                        firefoxOptions.addPreference("browser.download.folderList", 2);
+                        firefoxOptions.addPreference("browser.download.useDownloadDir", true);
+                        firefoxOptions.addPreference("browser.download.manager.showWhenStarting", false);
+                        firefoxOptions.addPreference("browser.helperApps.neverAsk.saveToDisk", "application/pdf");
+                        firefoxOptions.addPreference("pdfjs.disabled", true);
 
-                driver = new EdgeDriver(edgeOptions);
-                break;
+                        firefoxOptions.addPreference("profile.default_content_setting_value.notifications", 2);
+                        firefoxOptions.addPreference("signon.rememberSignons", false);
+                    }
+                    if ("headless".equalsIgnoreCase(browserMode)) {
+                        firefoxOptions.addArguments("--headless");
+                        firefoxOptions.addArguments("--width=1920");
+                        firefoxOptions.addArguments("--height=1080");
+                    }
 
-            default:
-                baseClass.failLog("Browser not supported: " + browser);
-                throw new IllegalArgumentException("Unsupported browser: " + browser);
+                    if (useGrid) {
+                        System.out.println("Running tests on Selenium Grid: " + gridUrl);
+                        driver = new RemoteWebDriver(new URL(gridUrl), firefoxOptions);
+                    } else {
+                        driver = new FirefoxDriver(firefoxOptions);
+                    }
+                    break;
+
+                case "edge":
+                    EdgeOptions edgeOptions = new EdgeOptions();
+                    edgeOptions.addArguments("--start-maximized");
+                    edgeOptions.addArguments("--disable-infobars");
+                    edgeOptions.addArguments("--disable-extensions");
+                    edgeOptions.addArguments("--disable-popup-blocking");
+                    if (browserPref != null) {
+                        edgeOptions.setExperimentalOption("prefs", browserPref);
+                    }
+
+                    if ("headless".equalsIgnoreCase(browserMode)) {
+                        edgeOptions.addArguments("--headless");
+                        edgeOptions.addArguments("--no-sandbox");
+                        edgeOptions.addArguments("--disable-dev-shm-usage");
+                        edgeOptions.addArguments("--window-size=1920,1080");
+                        edgeOptions.addArguments("--disable-gpu");
+                    }
+
+                    if (useGrid) {
+                        System.out.println("Running tests on Selenium Grid: " + gridUrl);
+                        driver = new RemoteWebDriver(new URL(gridUrl), edgeOptions);
+                    } else {
+                        driver = new EdgeDriver(edgeOptions);
+                    }
+                    break;
+
+                default:
+                    baseClass.failLog("Browser not supported: " + browser);
+                    throw new IllegalArgumentException("Unsupported browser: " + browser);
+            }
+
+        } catch (Exception e) {
+            baseClass.failLog("Error initializing browser: " + e.getMessage());
         }
 
         return driver;
     }
 
+    /**
+     * Determines whether to use Selenium Grid for running tests based on the provided Grid URL.
+     *
+     * <p>This method checks if the Selenium Grid is available and ready to use by sending a GET request
+     * to the Grid's status endpoint. If the Grid is ready, it returns true; otherwise, it falls back to
+     * using a local WebDriver instance.</p>
+     *
+     * @param gridUrl The URL of the Selenium Grid, including the protocol (e.g., http://localhost:4444).
+     * @return {@code true} if the Selenium Grid is available and ready; {@code false} otherwise.
+     */
+    private boolean useGrid(String gridUrl) {
+        boolean useGrid = false;
+
+        if (gridUrl == null || gridUrl.trim().isEmpty()) {
+            System.out.println("Grid URL is null or empty, using local driver");
+            return false;
+        }
+
+        try {
+            URL url = new URL(gridUrl + "/status");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000); // 10 seconds - increased timeout
+            conn.setReadTimeout(10000); // 10 seconds read timeout
+            conn.connect();
+
+            int responseCode = conn.getResponseCode();
+            System.out.println("Grid status check response code: " + responseCode);
+
+            if (responseCode == 200) {
+                // Additional check to verify grid is ready
+                try {
+                    // Read response to ensure grid is actually ready
+                    String response = new String(conn.getInputStream().readAllBytes());
+                    if (response.contains("\"ready\": true") || response.contains("ready\":true")) {
+                        useGrid = true;
+                        System.out.println("Selenium Grid is ready and available");
+                    } else {
+                        System.out.println("Selenium Grid responded but is not ready yet");
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error reading grid status response: " + e.getMessage());
+                }
+            } else {
+                System.out.println("Grid not available, response code: " + responseCode);
+            }
+
+            conn.disconnect();
+        } catch (Exception e) {
+            System.out.println("Grid connection failed: " + e.getMessage());
+            useGrid = false;
+        }
+
+        System.out.println("Using Grid: " + useGrid);
+        return useGrid;
+    }
 
     /**
      * Captures a screenshot and attaches it to the Cucumber scenario.

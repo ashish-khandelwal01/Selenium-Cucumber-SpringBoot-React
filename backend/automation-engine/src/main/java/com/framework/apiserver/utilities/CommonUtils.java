@@ -77,13 +77,14 @@ public class CommonUtils {
      *
      * <p>The method inherits the I/O of the current process to display logs in the console.</p>
      *
-     * @param tag         The tag to filter test cases to be executed.
-     * @param runId       The unique identifier for the test run.
-     * @param failedReport  the path of the failed report file.
+     * @param tag          The tag to filter test cases to be executed.
+     * @param runId        The unique identifier for the test run.
+     * @param failedReport the path of the failed report file.
+     * @param browserName  the name of browser provided by the user
      * @throws IOException          If an I/O error occurs during process execution.
      * @throws InterruptedException If the current thread is interrupted while waiting for the process to complete.
      */
-    public static void testCaseRun(String tag, String runId, Path failedReport) throws IOException, InterruptedException {
+    public static void testCaseRun(String tag, String runId, Path failedReport, String browserName) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add("java");
         command.add("-Drun.id=" + runId);
@@ -94,6 +95,7 @@ public class CommonUtils {
         }
         command.add("-cp");
         command.add(System.getProperty("java.class.path")); // current classpath
+        command.add("-DbrowserName=" + browserName);
         if(tag != null && !tag.isEmpty()) {
             command.add("com.framework.apiserver.testrunner.TestRunner");
         }else{
