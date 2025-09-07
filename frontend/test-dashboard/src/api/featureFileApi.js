@@ -38,3 +38,14 @@ export const viewFeatureFile = (featureFileName) =>
  */
 export const updateFeatureFile = (featureFileName, content) =>
     featuresApi.put(`/${featureFileName}`, { content });
+
+/**
+ * Create a feature file with content via the API.
+ *
+ * @function updateFeatureFile
+ * @param {string} featureFileName - The name of the feature file to add.
+ * @param {string} content - The new content for the feature file.
+ * @returns {Promise<Object>} A promise that puts data in the backend.
+ */
+export const createFeatureFile = (featureFileName, content) =>
+    featuresApi.post(`/${featureFileName}`, { content });

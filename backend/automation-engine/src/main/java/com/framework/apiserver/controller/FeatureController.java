@@ -78,4 +78,24 @@ public class FeatureController {
         Files.writeString(Path.of(FEATURE_PATH + name), content.getContent(),
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
+
+    /**
+     * Create a new feature file.
+     * @param name the name of the feature file
+     * @param content the new content for the feature file
+     * @throws IOException if the file cannot be written
+     */
+    @Operation(
+            summary = "Create feature file",
+            description = "Create a feature file with specific content.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Feature file added successfully"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/{name}")
+    public void createFeature(@PathVariable String name, @RequestBody FeatureUpdateRequest content) throws IOException {
+        Files.writeString(Path.of(FEATURE_PATH + name), content.getContent(),
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+    }
 }
