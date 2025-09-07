@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useFeatures } from "@/hooks/useFeatureFile";
 import Button from "@/components/ui/button";
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Info } from 'lucide-react';
 
 const Feature = () => {
   const {
@@ -467,6 +467,18 @@ const Feature = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Step Definition Tip Banner */}
+            <div className="px-4 py-2 bg-blue-900/30 border-b border-blue-700/50 text-blue-100">
+              <div className="flex items-center gap-2 text-sm">
+                <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                <span>
+                  <strong>💡 Tip:</strong> Remember to implement step definitions for any new or modified steps in your feature scenarios.
+                  Each Given/When/Then step needs a corresponding code implementation to be executable.
+                </span>
+              </div>
+            </div>
+
             <Editor
               height="100%"
               language="gherkin"
@@ -630,6 +642,15 @@ const CreateFeatureModal = ({ isOpen, onClose, onCreateFeature, onSelectNewFile 
 
           {/* Content */}
           <div className="p-6 space-y-4 overflow-auto max-h-[calc(90vh-180px)]">
+            {/* Step Definition Reminder */}
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                <p className="font-medium mb-1">📋 Remember: Step Definitions Required</p>
+                <p>After creating your feature file, ensure you have step definitions implemented for each Given/When/Then step. Without corresponding step implementations, your scenarios won't be executable in your test framework.</p>
+              </div>
+            </div>
+
             {/* Feature Name Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
