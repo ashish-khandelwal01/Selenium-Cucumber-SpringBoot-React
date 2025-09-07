@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { listFeatures, viewFeatureFile, updateFeatureFile } from "@/api/featureFileApi";
+import { listFeatures, viewFeatureFile, updateFeatureFile, createFeatureFile } from "@/api/featureFileApi";
 
 export function useFeatures() {
+  // All useState calls first - in consistent order
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [content, setContent] = useState("");
@@ -9,7 +10,6 @@ export function useFeatures() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch all feature files
   const fetchFiles = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -25,7 +25,6 @@ export function useFeatures() {
     }
   }, []);
 
-  // Load content of a specific file
   const loadFile = useCallback(async (fileName) => {
     if (!fileName) return;
 
@@ -44,7 +43,6 @@ export function useFeatures() {
     }
   }, []);
 
-  // Save current file content
   const saveFile = useCallback(async () => {
     if (!selectedFile || !content) return;
 
@@ -63,19 +61,41 @@ export function useFeatures() {
     }
   }, [selectedFile, content]);
 
-  // Update content in state
+  const createFile = useCallback(async (fileName, fileContent) => {
+    // Use parameters instead of state to avoid dependency issues
+    const nameToUse = fileName || selectedFile;
+    const contentToUse = fileContent || content;
+
+    if (!nameToUse || !contentToUse) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      await createFeatureFile(nameToUse, contentToUse);
+      // Refresh file list after creating
+      await fetchFiles();
+      return { success: true, message: "File created successfully!" };
+    } catch (err) {
+      const errorMessage = `Failed to create file: ${nameToUse}`;
+      setError(errorMessage);
+      console.error("Error creating file:", err);
+      return { success: false, message: errorMessage };
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedFile, content, fetchFiles]);
+
   const updateContent = useCallback((newContent) => {
     setContent(newContent);
   }, []);
 
-  // Clear current selection
   const clearSelection = useCallback(() => {
     setSelectedFile(null);
     setContent("");
     setError(null);
   }, []);
 
-  // Initialize - fetch files on mount
+  // useEffect calls last - in consistent order
   useEffect(() => {
     fetchFiles();
   }, [fetchFiles]);
@@ -93,6 +113,7 @@ export function useFeatures() {
     fetchFiles,
     loadFile,
     saveFile,
+    createFile,
     updateContent,
     clearSelection
   };

@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useFeatures } from "@/hooks/useFeatureFile";
 import Button from "@/components/ui/button";
@@ -13,6 +13,7 @@ const Feature = () => {
     error,
     loadFile,
     saveFile,
+    createFile,
     updateContent
   } = useFeatures();
 
@@ -76,12 +77,9 @@ const Feature = () => {
     editorRef.current = editor;
     runValidation(content, editor);
 
-    // Remove Ctrl+S / Cmd+S shortcut for saving
-    // (No event listener for keydown)
-
     // Clean up on unmount
     editor.onDidDispose(() => {
-      // No event listener to remove
+      // Cleanup if needed
     });
   };
 
@@ -113,10 +111,8 @@ const Feature = () => {
     let inFeatureDescription = false;
     let previousTableColumns = 0;
     let featureLine = 0;
-    let insideScenarioBlock = false; // TRUE when inside Background/Scenario/Examples block
-    let hasSeenStepsInCurrentBlock = false; // TRUE when we've seen steps in current scenario
-
-    console.log("=== VALIDATION START ===");
+    let insideScenarioBlock = false;
+    let hasSeenStepsInCurrentBlock = false;
 
     lines.forEach((line, index) => {
       const lineNum = index + 1;
@@ -155,8 +151,6 @@ const Feature = () => {
         insideScenarioBlock = false;
         hasSeenStepsInCurrentBlock = false;
 
-        console.log(`Line ${lineNum}: FEATURE detected - Reset scenario context`);
-
         if (!trimmedLine.match(/^Feature:\s+.+/)) {
           markers.push({
             startLineNumber: lineNum,
@@ -170,20 +164,17 @@ const Feature = () => {
         return;
       }
 
-      // Handle feature description lines (As a user, I want, So that)
+      // Handle feature description lines
       if (inFeatureDescription && (trimmedLine.startsWith('As ') || trimmedLine.startsWith('I want') || trimmedLine.startsWith('So that'))) {
-        console.log(`Line ${lineNum}: Valid feature description line`);
-        return; // These are valid feature description lines
+        return;
       }
 
-      // Rule validation (Gherkin 6)
+      // Rule validation
       if (trimmedLine.startsWith('Rule:')) {
         inTable = false;
         inFeatureDescription = false;
         insideScenarioBlock = false;
         hasSeenStepsInCurrentBlock = false;
-
-        console.log(`Line ${lineNum}: RULE detected - Reset scenario context`);
 
         if (!trimmedLine.match(/^Rule:\s+.+/)) {
           markers.push({
@@ -202,22 +193,18 @@ const Feature = () => {
       if (trimmedLine.startsWith('Background:')) {
         inTable = false;
         inFeatureDescription = false;
-        insideScenarioBlock = true; // ENTER scenario block
+        insideScenarioBlock = true;
         hasSeenStepsInCurrentBlock = false;
-
-        console.log(`Line ${lineNum}: BACKGROUND detected - Enter scenario block`);
         return;
       }
 
-      // Scenario validation - this starts a new scenario context
+      // Scenario validation
       if (trimmedLine.match(/^(Scenario|Scenario Outline|Scenario Template):/)) {
         hasScenario = true;
         inTable = false;
         inFeatureDescription = false;
-        insideScenarioBlock = true; // ENTER scenario block
-        hasSeenStepsInCurrentBlock = false; // Reset for new scenario
-
-        console.log(`Line ${lineNum}: SCENARIO detected - Enter scenario block, reset steps`);
+        insideScenarioBlock = true;
+        hasSeenStepsInCurrentBlock = false;
 
         if (!trimmedLine.match(/^(Scenario|Scenario Outline|Scenario Template):\s+.+/)) {
           markers.push({
@@ -232,23 +219,16 @@ const Feature = () => {
         return;
       }
 
-      // Examples validation - STAY in scenario block, don't reset anything!
       if (trimmedLine.startsWith('Examples:')) {
         inTable = false;
         inFeatureDescription = false;
-        // DON'T change insideScenarioBlock or hasSeenStepsInCurrentBlock!
-
-        console.log(`Line ${lineNum}: EXAMPLES detected - Stay in scenario block, steps=${hasSeenStepsInCurrentBlock}`);
         return;
       }
 
-      // Tag validation - tags are scenario-related
+      // Tag validation
       if (trimmedLine.startsWith('@')) {
         inTable = false;
         inFeatureDescription = false;
-        // Tags don't affect scenario context
-
-        console.log(`Line ${lineNum}: TAG detected`);
 
         const tags = trimmedLine.split(/\s+/);
         tags.forEach(tag => {
@@ -270,9 +250,7 @@ const Feature = () => {
       if (trimmedLine.match(/^(Given|When|Then|And|But|\*)\s/)) {
         inTable = false;
         inFeatureDescription = false;
-        hasSeenStepsInCurrentBlock = true; // Mark that we've seen steps
-
-        console.log(`Line ${lineNum}: STEP detected - Mark hasSeenSteps=true`);
+        hasSeenStepsInCurrentBlock = true;
 
         if (!trimmedLine.match(/^(Given|When|Then|And|But|\*)\s+.+/)) {
           markers.push({
@@ -285,7 +263,7 @@ const Feature = () => {
           });
         }
 
-        // Check for proper indentation (steps should be indented)
+        // Check for proper indentation
         const stepIndent = originalLine.search(/\S/);
         if (stepIndent === 0) {
           markers.push({
@@ -303,8 +281,6 @@ const Feature = () => {
       // Table validation
       if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
         const columns = trimmedLine.split('|').filter(cell => cell.trim() !== '').length;
-
-        console.log(`Line ${lineNum}: TABLE ROW detected`);
 
         if (inTable && previousTableColumns > 0 && columns !== previousTableColumns) {
           markers.push({
@@ -325,26 +301,22 @@ const Feature = () => {
         previousTableColumns = 0;
       }
 
-      // Check for unrecognized syntax - CRITICAL SECTION
+      // Check for unrecognized syntax
       if (trimmedLine &&
           !trimmedLine.match(/^(Feature|Rule|Scenario|Scenario Outline|Scenario Template|Background|Examples|Given|When|Then|And|But|\*|@|\|)/) &&
-          !trimmedLine.match(/^\s*\<.*\>\s*$/) && // parameter placeholders
-          !trimmedLine.match(/^(As |I want|So that)/) && // Feature description lines
+          !trimmedLine.match(/^\s*\<.*\>\s*$/) &&
+          !trimmedLine.match(/^(As |I want|So that)/) &&
           !inMultilineString) {
 
-        // Default to warning
         let severity = monaco.MarkerSeverity.Warning;
         let message = "Unrecognized Gherkin syntax. This line doesn't match any known Gherkin keywords.";
 
-        // STRICT ERROR inside any scenario block
         if (insideScenarioBlock) {
           severity = monaco.MarkerSeverity.Error;
           message = hasSeenStepsInCurrentBlock
             ? `INVALID SYNTAX: After steps in a scenario, only valid Gherkin keywords (Given/When/Then/And/But), tables (|...|), docstrings ("""), or Examples are allowed. Found: "${trimmedLine}"`
             : `INVALID SYNTAX: Inside scenario blocks, only valid Gherkin keywords are allowed. Found: "${trimmedLine}"`;
         }
-
-        console.log(`Line ${lineNum}: INVALID SYNTAX - "${trimmedLine}" - insideScenarioBlock=${insideScenarioBlock}, hasSeenSteps=${hasSeenStepsInCurrentBlock}, severity=${severity === monaco.MarkerSeverity.Error ? 'ERROR' : 'WARNING'}`);
 
         markers.push({
           startLineNumber: lineNum,
@@ -380,9 +352,6 @@ const Feature = () => {
       });
     }
 
-    console.log(`=== VALIDATION END - Found ${markers.length} markers ===`);
-    console.log('Markers:', markers.map(m => `Line ${m.startLineNumber}: ${m.message} (${m.severity === monaco.MarkerSeverity.Error ? 'ERROR' : 'WARNING'})`));
-
     monaco.editor.setModelMarkers(editor.getModel(), "gherkin", markers);
   };
 
@@ -412,8 +381,6 @@ const Feature = () => {
     }
 
     const summary = getValidationSummary();
-
-    console.log("SAVE ATTEMPT - Errors:", summary.errors, "Warnings:", summary.warnings);
 
     if (summary.errors > 0) {
       const markers = monacoRef.current.editor.getModelMarkers({ owner: "gherkin" });
@@ -521,9 +488,9 @@ const Feature = () => {
 
 // Validation summary component
 const ValidationSummary = ({ getValidationSummary }: { getValidationSummary: () => { errors: number, warnings: number } }) => {
-  const [summary, setSummary] = React.useState({ errors: 0, warnings: 0 });
+  const [summary, setSummary] = useState({ errors: 0, warnings: 0 });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setSummary(getValidationSummary());
     }, 500);
@@ -554,4 +521,3 @@ const ValidationSummary = ({ getValidationSummary }: { getValidationSummary: () 
 };
 
 export default Feature;
-
