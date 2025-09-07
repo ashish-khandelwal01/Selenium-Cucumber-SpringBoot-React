@@ -74,6 +74,20 @@ const Feature = () => {
   const handleEditorMount = (editor: any) => {
     editorRef.current = editor;
     runValidation(content, editor);
+
+    // Add Ctrl+S / Cmd+S shortcut for saving
+    const saveShortcutHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    editor.getDomNode()?.addEventListener('keydown', saveShortcutHandler);
+
+    // Clean up on unmount
+    editor.onDidDispose(() => {
+      editor.getDomNode()?.removeEventListener('keydown', saveShortcutHandler);
+    });
   };
 
   // On content change
@@ -507,12 +521,13 @@ const Feature = () => {
                 lineNumbers: "on",
                 minimap: { enabled: false },
                 wordWrap: "on",
-                scrollBeyondLastLine: false,
+                scrollBeyondLastLine: true,
                 automaticLayout: true,
                 tabSize: 2,
                 insertSpaces: true,
                 renderWhitespace: "selection",
                 showFoldingControls: "always",
+                padding: { top: 0, bottom: 20 },
               }}
             />
           </>
@@ -591,3 +606,4 @@ const ValidationSummary = ({ getValidationSummary }: { getValidationSummary: () 
 };
 
 export default Feature;
+
