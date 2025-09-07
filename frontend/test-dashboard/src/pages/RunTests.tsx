@@ -1,9 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { useTags } from '../hooks/useTags';
 import { useAsyncTestRun } from '../hooks/useAsyncTestRun';
 import { useAsyncJobManager } from '../hooks/useAsyncJobManager';
 import { runTests } from '../api/testExecutionApi';
+import { useDataSheet } from "@/hooks/useDataSheetUpdate";
+import Button from "@/components/ui/button";
+import { X, AlertCircle, Info } from 'lucide-react';
+import { DataGrid } from "react-data-grid";
 
 const RunTestsPage = () => {
   const { tags, loading, error } = useTags();
@@ -64,6 +68,24 @@ const RunTestsPage = () => {
       }
     }
   };
+
+const {
+  sheets,
+  selectedSheet,
+  content,
+  loading: loadingSheets,
+  saving,
+  error: errorSheets,
+  setSelectedSheet,
+  loadSheet,
+  saveSheet,
+  updateContent,
+  clearSelection,
+} = useDataSheet();
+
+  const rows = content;
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const isCurrentlyRunning = running || asyncLoading;
 
@@ -207,7 +229,55 @@ const RunTestsPage = () => {
           )}
         </CardContent>
       </Card>
+      <div>
+            <h2>Excel Sheet Editor</h2>
+
+            {/* Dropdown to select sheet */}
+            <select
+              value={selectedSheet ?? ""}
+              onChange={e => loadSheet(e.target.value)}
+            >
+              <option value="">-- Select a sheet --</option>
+              {sheets.map(sheet => (
+                <option key={sheet} value={sheet}>
+                  {sheet}
+                </option>
+              ))}
+            </select>
+
+
+            {/* Render table editor only when rows exist */}
+            {rows.length > 0 && (
+              <>
+                <DataGrid
+                  columns={
+                    rows[0]?.map((_: any, i: number) => ({
+                      key: i.toString(),
+                      name: `Col ${i + 1}`
+                    })) || []
+                  }
+                  rows={rows.map((row, i) => {
+                    const obj: Record<string, string> = {};
+                    row.forEach((val: string, j: number) => (obj[j.toString()] = val));
+                    return obj;
+                  })}
+                  onRowsChange={(updatedRows) => {
+                    const newContent = updatedRows.map((rowObj: Record<string, string>) =>
+                      Object.keys(rowObj)
+                        .sort((a, b) => Number(a) - Number(b))
+                        .map((key) => rowObj[key])
+                    );
+                    updateContent(newContent);
+                  }}
+                />
+                <button onClick={() => saveSheet(selectedSheet!, content)}>
+                  Save Excel
+                </button>
+              </>
+            )}
+          </div>
     </main>
+
   );
 };
 

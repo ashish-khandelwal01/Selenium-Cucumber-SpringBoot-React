@@ -61,7 +61,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend/test-dashboard:/app
-      - /app/node_modules
+      - node_modules:/app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - REACT_APP_API_URL=http://localhost:8080
@@ -83,6 +83,7 @@ volumes:
   postgres_data:
     external: true
     name: java-selenium-cucumber-react_postgres_data
+  node_modules:
 
 networks:
   app-net:

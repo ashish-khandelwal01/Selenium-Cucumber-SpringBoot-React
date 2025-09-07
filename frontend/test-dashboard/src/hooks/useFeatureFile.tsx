@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { listFeatures, viewFeatureFile, updateFeatureFile, createFeatureFile } from "@/api/featureFileApi";
 
 export function useFeatures() {
-  // All useState calls first - in consistent order
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [content, setContent] = useState("");
