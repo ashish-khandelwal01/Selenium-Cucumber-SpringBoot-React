@@ -447,61 +447,37 @@ const Feature = () => {
   if (loading && files.length === 0) return <div>Loading feature files...</div>;
 
   return (
-    <div style={{ display: "flex", height: "90vh" }}>
+    <div className="flex h-[90vh] bg-gray-900 text-gray-100">
       {/* Sidebar */}
-      <div style={{ width: "250px", borderRight: "1px solid #ccc", padding: "10px", overflow: "auto" }}>
-        <h3 style={{ margin: "0 0 15px 0", fontSize: "16px" }}>Feature Files</h3>
-        {error && <div style={{ color: "red", fontSize: "12px", marginBottom: "10px" }}>{error}</div>}
+      <div className="w-[250px] border-r border-gray-700 p-3 overflow-auto bg-gray-800">
+        <h3 className="mb-4 text-lg font-semibold text-gray-100">Feature Files</h3>
+        {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
         {files.length === 0 && !loading && (
-          <div style={{ color: "#666", fontSize: "12px" }}>No feature files found</div>
+          <div className="text-gray-400 text-sm">No feature files found</div>
         )}
         {files.map(file => (
           <div
             key={file}
-            style={{
-              cursor: "pointer",
-              margin: "5px 0",
-              padding: "5px",
-              borderRadius: "3px",
-              color: file === selectedFile ? "white" : "black",
-              backgroundColor: file === selectedFile ? "#007ACC" : "transparent",
-              opacity: loading ? 0.5 : 1,
-              fontSize: "14px"
-            }}
+            className={`cursor-pointer my-1 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${file === selectedFile ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} ${loading ? 'opacity-50' : ''}`}
             onClick={() => !loading && loadFile(file)}
           >
-            📄 {file}
+            <span className="mr-2">📄</span>{file}
           </div>
         ))}
       </div>
 
       {/* Editor */}
-      <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+      <div className="flex-1 flex flex-col pb-5">
         {selectedFile ? (
           <>
-            <div style={{
-              padding: "10px",
-              borderBottom: "1px solid #ccc",
-              backgroundColor: "#f5f5f5",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}>
-              <span style={{ fontWeight: "bold" }}>📝 {selectedFile}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div className="px-4 py-3 border-b border-gray-600 bg-gray-700 flex justify-between items-center">
+              <span className="font-bold text-gray-100">📝 {selectedFile}</span>
+              <div className="flex items-center gap-3">
                 <ValidationSummary getValidationSummary={getValidationSummary} />
                 <button
                   onClick={handleSave}
                   disabled={!selectedFile || saving}
-                  style={{
-                    padding: "8px 16px",
-                    backgroundColor: saving ? "#ccc" : (hasValidationErrors() ? "#dc3545" : "#007ACC"),
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: saving ? "not-allowed" : "pointer",
-                    fontSize: "14px"
-                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm focus:outline-none ${saving ? 'bg-gray-600 text-gray-300 cursor-not-allowed' : hasValidationErrors() ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                 >
                   {saving ? "Saving..." : (hasValidationErrors() ? "🚫 Fix Errors First" : "💾 Save")}
                 </button>
@@ -532,14 +508,7 @@ const Feature = () => {
             />
           </>
         ) : (
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            color: "#666",
-            fontSize: "16px"
-          }}>
+          <div className="flex items-center justify-center h-full text-gray-400 text-lg">
             👈 Select a feature file to edit
           </div>
         )}
@@ -562,42 +531,19 @@ const ValidationSummary = ({ getValidationSummary }: { getValidationSummary: () 
 
   if (summary.errors === 0 && summary.warnings === 0) {
     return (
-      <span style={{
-        fontSize: "12px",
-        padding: "4px 8px",
-        borderRadius: "12px",
-        backgroundColor: "#d4edda",
-        color: "#155724",
-        border: "1px solid #c3e6cb"
-      }}>
-        ✅ Valid
-      </span>
+      <span className="text-xs px-3 py-1 rounded-full bg-green-700 text-green-100 border border-green-600 font-semibold">✅ Valid</span>
     );
   }
 
   return (
-    <div style={{ display: "flex", gap: "5px" }}>
+    <div className="flex gap-2">
       {summary.errors > 0 && (
-        <span style={{
-          fontSize: "12px",
-          padding: "4px 8px",
-          borderRadius: "12px",
-          backgroundColor: "#f8d7da",
-          color: "#721c24",
-          border: "1px solid #f5c6cb"
-        }}>
+        <span className="text-xs px-3 py-1 rounded-full bg-red-700 text-red-100 border border-red-600 font-semibold">
           ❌ {summary.errors} error{summary.errors !== 1 ? 's' : ''}
         </span>
       )}
       {summary.warnings > 0 && (
-        <span style={{
-          fontSize: "12px",
-          padding: "4px 8px",
-          borderRadius: "12px",
-          backgroundColor: "#fff3cd",
-          color: "#856404",
-          border: "1px solid #ffeaa7"
-        }}>
+        <span className="text-xs px-3 py-1 rounded-full bg-yellow-700 text-yellow-100 border border-yellow-600 font-semibold">
           ⚠️ {summary.warnings} warning{summary.warnings !== 1 ? 's' : ''}
         </span>
       )}
