@@ -43,7 +43,7 @@ public class GoogleStepDefinitions {
     /**
      * Initializes the page objects with the current WebDriver instance.
      */
-    private void initDriverAndPages() {
+    private void initDriverAndPages() {8
         googlePage = new GooglePage(driverManager.getDriver(), selUtil);
     }
 

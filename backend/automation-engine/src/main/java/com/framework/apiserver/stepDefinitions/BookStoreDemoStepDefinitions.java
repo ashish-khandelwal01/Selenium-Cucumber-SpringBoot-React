@@ -37,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class BookStoreDemoStepDefinitions {
 
+    private final BrowserStepDefinitions browserStepDefinitions;
     private final DriverManager driverManager;
     private final BaseClass baseClass;
     private final TestExecutionService testService;
@@ -55,10 +56,12 @@ public class BookStoreDemoStepDefinitions {
      * @param selUtil The SelUtil instance for Selenium utility methods.
      */
     @Autowired
-    public BookStoreDemoStepDefinitions(DriverManager driverManager,
+    public BookStoreDemoStepDefinitions(BrowserStepDefinitions browserStepDefinitions,
+                                        DriverManager driverManager,
                                         BaseClass baseClass,
                                         TestExecutionService testService,
                                         SelUtil selUtil) {
+        this.browserStepDefinitions = browserStepDefinitions;
         this.driverManager = driverManager;
         this.baseClass = baseClass;
         this.testService = testService;
