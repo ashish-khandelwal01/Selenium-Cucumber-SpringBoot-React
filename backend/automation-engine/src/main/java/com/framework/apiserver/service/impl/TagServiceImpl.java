@@ -81,16 +81,30 @@ public class TagServiceImpl implements TagService {
                 });
 
         // Retrieve existing tags from the database
-        List<String> existingTags = tagRepository.findAll()
+        List<Tag> existingTagEntities = tagRepository.findAll();
+        Set<String> existingTags = existingTagEntities
                 .stream()
                 .map(Tag::getName)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
-        // Remove existing tags from the found tags
-        foundTags.removeAll(existingTags);
+        Set<String> tagsToAdd = new HashSet<>(foundTags);
+        tagsToAdd.removeAll(existingTags);
 
-        // Create new Tag entities for the remaining tags and save them to the database
-        List<Tag> newTags = foundTags.stream().map(Tag::new).toList();
-        tagRepository.saveAll(newTags);
+        Set<String> tagsToDelete = new HashSet<>(existingTags);
+        tagsToDelete.removeAll(foundTags);
+
+        // Add new tags
+        if (!tagsToAdd.isEmpty()) {
+            List<Tag> newTags = tagsToAdd.stream().map(Tag::new).toList();
+            tagRepository.saveAll(newTags);
+        }
+
+        // Delete old tags
+        if (!tagsToDelete.isEmpty()) {
+            List<Tag> tagsToRemove = existingTagEntities.stream()
+                    .filter(tag -> tagsToDelete.contains(tag.getName()))
+                    .toList();
+            tagRepository.deleteAll(tagsToRemove);
+        }
     }
 }
