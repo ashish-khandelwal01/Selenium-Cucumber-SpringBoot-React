@@ -7,6 +7,7 @@ import TestHistory from "./pages/TestHistory";
 import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Features from "./pages/Features";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { BrowserProvider } from './context/BrowserContext';
@@ -43,6 +44,7 @@ function App() {
             <Route path="rerun-failed" element={<RerunFailed />} />
             <Route path="test-history" element={<TestHistory />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="features" element={<Features />} />
           </Route>
         </Routes>
       </AuthProvider>

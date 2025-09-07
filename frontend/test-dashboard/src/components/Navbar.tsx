@@ -2,7 +2,7 @@ import React, { useContext, useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import {
   BarChart3, PlayCircle, RefreshCcw, Clock, FileText,
-  LogIn, LogOut, ChevronDown, Monitor
+  LogIn, LogOut, ChevronDown, Monitor, FileCode
 } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import { useBrowser } from '../context/BrowserContext';
@@ -13,6 +13,7 @@ const navItems = [
   { icon: <RefreshCcw className="mr-2" />, label: 'Rerun Failed', to: '/rerun-failed' },
   { icon: <Clock className="mr-2" />, label: 'Test History', to: '/test-history' },
   { icon: <FileText className="mr-2" />, label: 'Reports', to: '/reports' },
+  { icon: <FileCode className="mr-2" />, label: 'Features', to: '/features' },
 ];
 
 const Navbar = () => {
