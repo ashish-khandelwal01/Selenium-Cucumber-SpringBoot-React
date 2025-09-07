@@ -72,8 +72,8 @@ public class BookStoreDemoStepDefinitions {
      * Initializes the page objects with the current WebDriver instance.
      */
     private void initDriverAndPages() {
-        loginPage = new LoginPage(browserStepDefinitions.getDriver(), selUtil);
-        bookStorePage = new BookStorePage(browserStepDefinitions.getDriver(), selUtil);
+        loginPage = new LoginPage(driverManager.getDriver(), selUtil);
+        bookStorePage = new BookStorePage(driverManager.getDriver(), selUtil);
     }
 
     /**
