@@ -84,7 +84,7 @@ const Feature = () => {
     }
   };
 
-  // Comprehensive Gherkin validation
+  // FIXED Comprehensive Gherkin validation
   const runValidation = (text: string, editor: any) => {
     const monaco = monacoRef.current;
     if (!monaco) return;
@@ -101,9 +101,13 @@ const Feature = () => {
     let hasScenario = false;
     let inMultilineString = false;
     let inTable = false;
+    let inFeatureDescription = false;
     let previousTableColumns = 0;
-    let currentIndentLevel = 0;
     let featureLine = 0;
+    let insideScenarioBlock = false; // TRUE when inside Background/Scenario/Examples block
+    let hasSeenStepsInCurrentBlock = false; // TRUE when we've seen steps in current scenario
+
+    console.log("=== VALIDATION START ===");
 
     lines.forEach((line, index) => {
       const lineNum = index + 1;
@@ -138,7 +142,11 @@ const Feature = () => {
         hasFeature = true;
         featureLine = lineNum;
         inTable = false;
-        currentIndentLevel = originalLine.search(/\S/);
+        inFeatureDescription = true;
+        insideScenarioBlock = false;
+        hasSeenStepsInCurrentBlock = false;
+
+        console.log(`Line ${lineNum}: FEATURE detected - Reset scenario context`);
 
         if (!trimmedLine.match(/^Feature:\s+.+/)) {
           markers.push({
@@ -153,9 +161,21 @@ const Feature = () => {
         return;
       }
 
+      // Handle feature description lines (As a user, I want, So that)
+      if (inFeatureDescription && (trimmedLine.startsWith('As ') || trimmedLine.startsWith('I want') || trimmedLine.startsWith('So that'))) {
+        console.log(`Line ${lineNum}: Valid feature description line`);
+        return; // These are valid feature description lines
+      }
+
       // Rule validation (Gherkin 6)
       if (trimmedLine.startsWith('Rule:')) {
         inTable = false;
+        inFeatureDescription = false;
+        insideScenarioBlock = false;
+        hasSeenStepsInCurrentBlock = false;
+
+        console.log(`Line ${lineNum}: RULE detected - Reset scenario context`);
+
         if (!trimmedLine.match(/^Rule:\s+.+/)) {
           markers.push({
             startLineNumber: lineNum,
@@ -172,13 +192,23 @@ const Feature = () => {
       // Background validation
       if (trimmedLine.startsWith('Background:')) {
         inTable = false;
+        inFeatureDescription = false;
+        insideScenarioBlock = true; // ENTER scenario block
+        hasSeenStepsInCurrentBlock = false;
+
+        console.log(`Line ${lineNum}: BACKGROUND detected - Enter scenario block`);
         return;
       }
 
-      // Scenario validation
+      // Scenario validation - this starts a new scenario context
       if (trimmedLine.match(/^(Scenario|Scenario Outline|Scenario Template):/)) {
         hasScenario = true;
         inTable = false;
+        inFeatureDescription = false;
+        insideScenarioBlock = true; // ENTER scenario block
+        hasSeenStepsInCurrentBlock = false; // Reset for new scenario
+
+        console.log(`Line ${lineNum}: SCENARIO detected - Enter scenario block, reset steps`);
 
         if (!trimmedLine.match(/^(Scenario|Scenario Outline|Scenario Template):\s+.+/)) {
           markers.push({
@@ -193,15 +223,24 @@ const Feature = () => {
         return;
       }
 
-      // Examples validation
+      // Examples validation - STAY in scenario block, don't reset anything!
       if (trimmedLine.startsWith('Examples:')) {
         inTable = false;
+        inFeatureDescription = false;
+        // DON'T change insideScenarioBlock or hasSeenStepsInCurrentBlock!
+
+        console.log(`Line ${lineNum}: EXAMPLES detected - Stay in scenario block, steps=${hasSeenStepsInCurrentBlock}`);
         return;
       }
 
-      // Tag validation
+      // Tag validation - tags are scenario-related
       if (trimmedLine.startsWith('@')) {
         inTable = false;
+        inFeatureDescription = false;
+        // Tags don't affect scenario context
+
+        console.log(`Line ${lineNum}: TAG detected`);
+
         const tags = trimmedLine.split(/\s+/);
         tags.forEach(tag => {
           if (!tag.match(/^@[\w\.-]+$/)) {
@@ -221,6 +260,10 @@ const Feature = () => {
       // Step validation
       if (trimmedLine.match(/^(Given|When|Then|And|But|\*)\s/)) {
         inTable = false;
+        inFeatureDescription = false;
+        hasSeenStepsInCurrentBlock = true; // Mark that we've seen steps
+
+        console.log(`Line ${lineNum}: STEP detected - Mark hasSeenSteps=true`);
 
         if (!trimmedLine.match(/^(Given|When|Then|And|But|\*)\s+.+/)) {
           markers.push({
@@ -252,6 +295,8 @@ const Feature = () => {
       if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
         const columns = trimmedLine.split('|').filter(cell => cell.trim() !== '').length;
 
+        console.log(`Line ${lineNum}: TABLE ROW detected`);
+
         if (inTable && previousTableColumns > 0 && columns !== previousTableColumns) {
           markers.push({
             startLineNumber: lineNum,
@@ -271,18 +316,34 @@ const Feature = () => {
         previousTableColumns = 0;
       }
 
-      // Check for unrecognized syntax (but allow docstrings and parameter placeholders)
+      // Check for unrecognized syntax - CRITICAL SECTION
       if (trimmedLine &&
           !trimmedLine.match(/^(Feature|Rule|Scenario|Scenario Outline|Scenario Template|Background|Examples|Given|When|Then|And|But|\*|@|\|)/) &&
           !trimmedLine.match(/^\s*\<.*\>\s*$/) && // parameter placeholders
+          !trimmedLine.match(/^(As |I want|So that)/) && // Feature description lines
           !inMultilineString) {
+
+        // Default to warning
+        let severity = monaco.MarkerSeverity.Warning;
+        let message = "Unrecognized Gherkin syntax. This line doesn't match any known Gherkin keywords.";
+
+        // STRICT ERROR inside any scenario block
+        if (insideScenarioBlock) {
+          severity = monaco.MarkerSeverity.Error;
+          message = hasSeenStepsInCurrentBlock
+            ? `INVALID SYNTAX: After steps in a scenario, only valid Gherkin keywords (Given/When/Then/And/But), tables (|...|), docstrings ("""), or Examples are allowed. Found: "${trimmedLine}"`
+            : `INVALID SYNTAX: Inside scenario blocks, only valid Gherkin keywords are allowed. Found: "${trimmedLine}"`;
+        }
+
+        console.log(`Line ${lineNum}: INVALID SYNTAX - "${trimmedLine}" - insideScenarioBlock=${insideScenarioBlock}, hasSeenSteps=${hasSeenStepsInCurrentBlock}, severity=${severity === monaco.MarkerSeverity.Error ? 'ERROR' : 'WARNING'}`);
+
         markers.push({
           startLineNumber: lineNum,
           startColumn: 1,
           endLineNumber: lineNum,
           endColumn: line.length + 1,
-          message: "Unrecognized Gherkin syntax. This line doesn't match any known Gherkin keywords.",
-          severity: monaco.MarkerSeverity.Warning,
+          message: message,
+          severity: severity,
         });
       }
     });
@@ -309,6 +370,9 @@ const Feature = () => {
         severity: monaco.MarkerSeverity.Warning,
       });
     }
+
+    console.log(`=== VALIDATION END - Found ${markers.length} markers ===`);
+    console.log('Markers:', markers.map(m => `Line ${m.startLineNumber}: ${m.message} (${m.severity === monaco.MarkerSeverity.Error ? 'ERROR' : 'WARNING'})`));
 
     monaco.editor.setModelMarkers(editor.getModel(), "gherkin", markers);
   };
@@ -340,6 +404,8 @@ const Feature = () => {
 
     const summary = getValidationSummary();
 
+    console.log("SAVE ATTEMPT - Errors:", summary.errors, "Warnings:", summary.warnings);
+
     if (summary.errors > 0) {
       const markers = monacoRef.current.editor.getModelMarkers({ owner: "gherkin" });
       const errorMarkers = markers.filter((m: any) =>
@@ -352,7 +418,7 @@ const Feature = () => {
 
       const moreErrors = errorMarkers.length > 5 ? `\n... and ${errorMarkers.length - 5} more errors` : '';
 
-      alert(`Please fix the following Gherkin errors before saving:\n\n${errorMessages}${moreErrors}`);
+      alert(`❌ CANNOT SAVE - Please fix the following Gherkin errors:\n\n${errorMessages}${moreErrors}`);
       return;
     }
 
@@ -423,7 +489,7 @@ const Feature = () => {
                     fontSize: "14px"
                   }}
                 >
-                  {saving ? "Saving..." : (hasValidationErrors() ? "🚫 Fix Errors" : "💾 Save")}
+                  {saving ? "Saving..." : (hasValidationErrors() ? "🚫 Fix Errors First" : "💾 Save")}
                 </button>
               </div>
             </div>
