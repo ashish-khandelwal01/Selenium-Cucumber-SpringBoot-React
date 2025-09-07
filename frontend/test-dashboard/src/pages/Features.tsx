@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useFeatures } from "@/hooks/useFeatureFile";
 import Button from "@/components/ui/button";
+import { X, AlertCircle } from 'lucide-react';
 
 const Feature = () => {
   const {
@@ -19,6 +20,7 @@ const Feature = () => {
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Monaco editor setup: Gherkin highlighting
   const handleEditorWillMount = (monaco: any) => {
@@ -412,7 +414,20 @@ const Feature = () => {
     <div className="flex h-[90vh] bg-gray-900 text-gray-100">
       {/* Sidebar */}
       <div className="w-[250px] border-r border-gray-700 p-3 overflow-auto bg-gray-800">
-        <h3 className="mb-4 text-lg font-semibold text-gray-100">Feature Files</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-100">Feature Files</h3>
+          <button
+            onClick={() => {
+              console.log("Create button clicked!"); // Debug log
+              setShowCreateModal(true);
+            }}
+            className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center gap-1 transition-colors font-medium border border-green-500 shadow-sm"
+            style={{ minWidth: '70px' }} // Ensure minimum width
+          >
+            <span className="font-bold">+</span>
+            <span>Create</span>
+          </button>
+        </div>
         {error && <div className="text-red-400 text-sm mb-2">{error}</div>}
         {files.length === 0 && !loading && (
           <div className="text-gray-400 text-sm">No feature files found</div>
@@ -482,6 +497,19 @@ const Feature = () => {
           </div>
         )}
       </div>
+
+      {/* Create Feature Modal */}
+      {showCreateModal && (
+        <CreateFeatureModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreateFeature={createFile}
+          onSelectNewFile={(fileName, content) => {
+            updateContent(content);
+            setShowCreateModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -519,5 +547,168 @@ const ValidationSummary = ({ getValidationSummary }: { getValidationSummary: () 
     </div>
   );
 };
+
+// Create Feature Modal Component - Updated to match Running Jobs Modal styling
+const CreateFeatureModal = ({ isOpen, onClose, onCreateFeature, onSelectNewFile }) => {
+  const [featureName, setFeatureName] = useState('');
+  const [featureContent, setFeatureContent] = useState(`Feature: New feature
+  As a user
+  I want to do something
+  So that I can achieve my goal
+
+  Scenario: First scenario
+    Given I have a precondition
+    When I perform an action
+    Then I should see the expected result`);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleCreate = async () => {
+    if (!featureName.trim()) {
+      setError('Feature name is required');
+      return;
+    }
+
+    // Add .feature extension if not present
+    let fileName = featureName.trim();
+    if (!fileName.endsWith('.feature')) {
+      fileName += '.feature';
+    }
+
+    setCreating(true);
+    setError('');
+
+    try {
+      const result = await onCreateFeature(fileName, featureContent);
+      if (result?.success) {
+        // Clear form and load the new file
+        onSelectNewFile(fileName, featureContent);
+        handleClose();
+      } else {
+        setError(result?.message || 'Failed to create feature file');
+      }
+    } catch (err) {
+      setError('Failed to create feature file');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleClose = () => {
+    setFeatureName('');
+    setFeatureContent(`Feature: New feature
+  As a user
+  I want to do something
+  So that I can achieve my goal
+
+  Scenario: First scenario
+    Given I have a precondition
+    When I perform an action
+    Then I should see the expected result`);
+    setError('');
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b">
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">📝</span>
+              <h2 className="text-xl font-semibold text-gray-900">Create New Feature File</h2>
+            </div>
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-4 overflow-auto max-h-[calc(90vh-180px)]">
+            {/* Feature Name Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Feature File Name
+              </label>
+              <input
+                type="text"
+                value={featureName}
+                onChange={(e) => setFeatureName(e.target.value)}
+                placeholder="e.g., user-login or user-login.feature"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-gray-800 placeholder-gray-400"
+                disabled={creating}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                📁 .feature extension will be added automatically if not provided
+              </p>
+            </div>
+
+            {/* Feature Content */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Feature Content
+              </label>
+              <textarea
+                value={featureContent}
+                onChange={(e) => setFeatureContent(e.target.value)}
+                rows={12}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white text-gray-800 font-mono text-sm resize-none leading-relaxed"
+                disabled={creating}
+                placeholder="Enter your Gherkin feature content here..."
+                style={{
+                  lineHeight: '1.6',
+                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
+                }}
+              />
+              <div className="mt-2 text-xs text-gray-500 flex items-center space-x-4">
+                <span>💡 Tip: Use proper Gherkin syntax with Feature, Scenario, Given/When/Then steps</span>
+              </div>
+            </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end space-x-3 p-6 border-t bg-gray-50">
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-100 transition-colors"
+              disabled={creating}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!featureName.trim() || creating}
+            >
+              {creating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <span>+</span>
+                  Create Feature
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
 export default Feature;
