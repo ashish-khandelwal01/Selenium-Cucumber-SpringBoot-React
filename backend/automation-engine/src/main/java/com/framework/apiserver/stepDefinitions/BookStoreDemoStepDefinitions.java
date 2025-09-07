@@ -37,7 +37,6 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class BookStoreDemoStepDefinitions {
 
-    private final BrowserStepDefinitions browserStepDefinitions;
     private final DriverManager driverManager;
     private final BaseClass baseClass;
     private final TestExecutionService testService;
@@ -56,12 +55,10 @@ public class BookStoreDemoStepDefinitions {
      * @param selUtil The SelUtil instance for Selenium utility methods.
      */
     @Autowired
-    public BookStoreDemoStepDefinitions(BrowserStepDefinitions browserStepDefinitions,
-                                        DriverManager driverManager,
+    public BookStoreDemoStepDefinitions(DriverManager driverManager,
                                         BaseClass baseClass,
                                         TestExecutionService testService,
                                         SelUtil selUtil) {
-        this.browserStepDefinitions = browserStepDefinitions;
         this.driverManager = driverManager;
         this.baseClass = baseClass;
         this.testService = testService;
@@ -72,8 +69,8 @@ public class BookStoreDemoStepDefinitions {
      * Initializes the page objects with the current WebDriver instance.
      */
     private void initDriverAndPages() {
-        loginPage = new LoginPage(browserStepDefinitions.getDriver(), selUtil);
-        bookStorePage = new BookStorePage(browserStepDefinitions.getDriver(), selUtil);
+        loginPage = new LoginPage(driverManager.getDriver(), selUtil);
+        bookStorePage = new BookStorePage(driverManager.getDriver(), selUtil);
     }
 
     /**

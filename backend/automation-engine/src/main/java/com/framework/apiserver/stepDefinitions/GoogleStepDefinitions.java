@@ -13,7 +13,6 @@ import org.testng.Assert;
 
 public class GoogleStepDefinitions {
 
-    private final BrowserStepDefinitions browserStepDefinitions;
     private final DriverManager driverManager;
     private final BaseClass baseClass;
     private final TestExecutionService testService;
@@ -31,12 +30,10 @@ public class GoogleStepDefinitions {
      * @param selUtil The SelUtil instance for Selenium utility methods.
      */
     @Autowired
-    public GoogleStepDefinitions(BrowserStepDefinitions browserStepDefinitions,
-                                        DriverManager driverManager,
+    public GoogleStepDefinitions(DriverManager driverManager,
                                         BaseClass baseClass,
                                         TestExecutionService testService,
                                         SelUtil selUtil) {
-        this.browserStepDefinitions = browserStepDefinitions;
         this.driverManager = driverManager;
         this.baseClass = baseClass;
         this.testService = testService;
@@ -47,7 +44,7 @@ public class GoogleStepDefinitions {
      * Initializes the page objects with the current WebDriver instance.
      */
     private void initDriverAndPages() {
-        googlePage = new GooglePage(browserStepDefinitions.getDriver(), selUtil);
+        googlePage = new GooglePage(driverManager.getDriver(), selUtil);
     }
 
     /**
