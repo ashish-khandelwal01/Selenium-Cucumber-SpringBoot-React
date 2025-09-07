@@ -76,18 +76,12 @@ const Feature = () => {
     editorRef.current = editor;
     runValidation(content, editor);
 
-    // Add Ctrl+S / Cmd+S shortcut for saving
-    const saveShortcutHandler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        handleSave();
-      }
-    };
-    editor.getDomNode()?.addEventListener('keydown', saveShortcutHandler);
+    // Remove Ctrl+S / Cmd+S shortcut for saving
+    // (No event listener for keydown)
 
     // Clean up on unmount
     editor.onDidDispose(() => {
-      editor.getDomNode()?.removeEventListener('keydown', saveShortcutHandler);
+      // No event listener to remove
     });
   };
 
