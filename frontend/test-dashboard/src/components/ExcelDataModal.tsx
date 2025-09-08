@@ -172,8 +172,6 @@ const ExcelDataModal = ({
   }
 
   const handleRowsChange = (updatedRows, changeInfo) => {
-    console.log("DataGrid rows changed:", updatedRows);
-    console.log("Changed indexes:", changeInfo);
 
     setEditableRows(updatedRows);
 
@@ -258,7 +256,6 @@ const ExcelDataModal = ({
         ),
       ];
 
-      console.log("Saving rows:", updatedRows);
       await saveSheet(sheetName, updatedRows);
       updateContent(updatedRows);
       onClose();
@@ -324,13 +321,6 @@ const ExcelDataModal = ({
             </button>
           </div>
 
-          {/* Debug Info */}
-          <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-            <strong>Debug:</strong> {editableRows.length} data rows, {headers.length} columns
-            <br />
-            <strong>Headers:</strong> {headers.join(', ')}
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
@@ -345,9 +335,6 @@ const ExcelDataModal = ({
               columns={columns}
               rows={editableRows}
               onRowsChange={handleRowsChange}
-              onCellClick={(args) => {
-                console.log("Cell clicked:", args);
-              }}
               style={{ height: '400px', width: '100%' }}
               headerRowHeight={40}
               rowHeight={35}
