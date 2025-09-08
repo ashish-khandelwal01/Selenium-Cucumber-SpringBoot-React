@@ -7,7 +7,7 @@ import { runTests } from '../api/testExecutionApi';
 import { useDataSheet } from "@/hooks/useDataSheetUpdate";
 import Button from "@/components/ui/button";
 import { X, AlertCircle, Info } from 'lucide-react';
-import { DataGrid } from "react-data-grid";
+import ExcelDataModal from '@/components/ExcelDataModal';
 
 const RunTestsPage = () => {
   const { tags, loading, error } = useTags();
@@ -85,7 +85,7 @@ const {
 
   const rows = content;
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDataSheetModal, setShowDataSheetModal] = useState(false);
 
   const isCurrentlyRunning = running || asyncLoading;
 
@@ -137,20 +137,68 @@ const {
                 ))}
               </select>
 
-              {/* Async Checkbox */}
-              <div className="flex items-center align-left gap-2 mb-6">
-                <input
-                  id="async-checkbox"
-                  type="checkbox"
-                  checked={isAsync}
-                  onChange={() => setIsAsync(!isAsync)}
-                  className="form-checkbox text-blue-500 h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                  disabled={isCurrentlyRunning}
-                />
-                <label htmlFor="async-checkbox" className="text-sm text-gray-300">
-                  Run asynchronously?
-                </label>
+              {/* Async Checkbox + Excel Sheet Editor */}
+              <div className="flex items-center justify-between mb-6 gap-4">
+                {/* Left side: Async Checkbox */}
+                <div className="flex items-center gap-2">
+                  <input
+                    id="async-checkbox"
+                    type="checkbox"
+                    checked={isAsync}
+                    onChange={() => setIsAsync(!isAsync)}
+                    className="form-checkbox text-blue-500 h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                    disabled={isCurrentlyRunning}
+                  />
+                  <label htmlFor="async-checkbox" className="text-sm text-gray-300">
+                    Run asynchronously?
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-gray-100 whitespace-nowrap">
+                    Excel Sheet Editor
+                  </h2>
+                  <select
+                    value={selectedSheet ?? ""}
+                    onChange={e => loadSheet(e.target.value)}
+                    className="p-2 border border-gray-600 rounded bg-gray-700 text-gray-100 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">-- Select a sheet --</option>
+                    {sheets.map(sheet => (
+                      <option key={sheet} value={sheet}>
+                        {sheet}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                      onClick={() => {
+                          if (!selectedSheet) {
+                            setMessage("Please select a sheet first!");
+                            setTimeout(() => setMessage(""), 4000);
+                            return;
+                          }
+                          setShowDataSheetModal(true);
+                        }}
+                      className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center gap-1 transition-colors font-medium border border-green-500 shadow-sm"
+                      style={{ minWidth: '70px' }}
+                    >
+                      <span className="font-bold">+</span>
+                      <span>Update Data</span>
+                    </button>
+                    {selectedSheet && (
+                        <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={clearSelection}
+                        className="p-1"
+                        >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Clear Selection</span>
+                        </Button>
+                    )}
+                </div>
               </div>
+
 
               <button
                 onClick={runTestsExecution}
@@ -229,53 +277,15 @@ const {
           )}
         </CardContent>
       </Card>
-      <div>
-            <h2>Excel Sheet Editor</h2>
-
-            {/* Dropdown to select sheet */}
-            <select
-              value={selectedSheet ?? ""}
-              onChange={e => loadSheet(e.target.value)}
-            >
-              <option value="">-- Select a sheet --</option>
-              {sheets.map(sheet => (
-                <option key={sheet} value={sheet}>
-                  {sheet}
-                </option>
-              ))}
-            </select>
-
-
-            {/* Render table editor only when rows exist */}
-            {rows.length > 0 && (
-              <>
-                <DataGrid
-                  columns={
-                    rows[0]?.map((_: any, i: number) => ({
-                      key: i.toString(),
-                      name: `Col ${i + 1}`
-                    })) || []
-                  }
-                  rows={rows.map((row, i) => {
-                    const obj: Record<string, string> = {};
-                    row.forEach((val: string, j: number) => (obj[j.toString()] = val));
-                    return obj;
-                  })}
-                  onRowsChange={(updatedRows) => {
-                    const newContent = updatedRows.map((rowObj: Record<string, string>) =>
-                      Object.keys(rowObj)
-                        .sort((a, b) => Number(a) - Number(b))
-                        .map((key) => rowObj[key])
-                    );
-                    updateContent(newContent);
-                  }}
-                />
-                <button onClick={() => saveSheet(selectedSheet!, content)}>
-                  Save Excel
-                </button>
-              </>
-            )}
-          </div>
+        {/* Data Sheet Modal */}
+      <ExcelDataModal
+        isOpen={showDataSheetModal}
+        onClose={() => setShowDataSheetModal(false)}
+        sheetName={selectedSheet}      // the sheet currently selected
+        rows={rows}                    // 2D array from your hook
+        updateContent={updateContent}  // updates the hook content
+        saveSheet={saveSheet}          // saves data through your hook
+      />
     </main>
 
   );

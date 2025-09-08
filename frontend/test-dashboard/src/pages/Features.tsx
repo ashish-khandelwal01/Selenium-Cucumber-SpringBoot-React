@@ -418,7 +418,6 @@ const Feature = () => {
           <h3 className="text-lg font-semibold text-gray-100">Feature Files</h3>
           <button
             onClick={() => {
-              console.log("Create button clicked!"); // Debug log
               setShowCreateModal(true);
             }}
             className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-md flex items-center gap-1 transition-colors font-medium border border-green-500 shadow-sm"

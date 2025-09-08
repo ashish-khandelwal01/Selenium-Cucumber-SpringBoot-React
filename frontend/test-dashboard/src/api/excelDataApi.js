@@ -33,8 +33,11 @@ export const viewSheetData = (sheetName) =>
  *
  * @function editSheetDataFile
  * @param {string} sheetName - The name of the sheet to update.
- * @param {string} dataRows - The new content for the data sheet file.
+ * @param {Array<Array<string>>} dataRows - The new content for the data sheet file as a 2D array.
  * @returns {Promise<Object>} A promise that puts data in the backend.
  */
-export const editSheetDataFile = (sheetName, dataRows) =>
-    dataApi.post(`/${sheetName}`, { dataRows });
+export const editSheetDataFile = (sheetName, dataRows) => {
+    console.log("Sending data to API:", dataRows);
+    // The backend expects the data directly as the body, not wrapped in an object
+    return dataApi.post(`/excel/${sheetName}`, dataRows);
+}
