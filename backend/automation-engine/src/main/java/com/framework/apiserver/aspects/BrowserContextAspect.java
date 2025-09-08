@@ -25,7 +25,6 @@ public class BrowserContextAspect {
         try {
             // Execute the original method
             Object result = joinPoint.proceed();
-            System.out.println("BrowserContextAspect: Method completed successfully with browser: " + browserType);
             return result;
 
         } catch (Exception e) {

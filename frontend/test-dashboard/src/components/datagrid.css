@@ -1,0 +1,206 @@
+/* React Data Grid Styles */
+.rdg {
+  --rdg-selection-color: #66afe9;
+  --rdg-background-color: #fff;
+  --rdg-header-background-color: #f8f9fa;
+  --rdg-header-row-height: 35px;
+  --rdg-header-font-weight: 600;
+  --rdg-row-height: 35px;
+  --rdg-cell-padding: 8px;
+  --rdg-summary-row-height: 35px;
+  --rdg-sign: calc(2 * var(--rdg-cell-padding) + 16px);
+  
+  display: grid;
+  color-scheme: var(--rdg-color-scheme, light dark);
+  
+  /* contain: strict; */
+  contain: size layout style paint;
+  content-visibility: auto;
+  
+  block-size: 100%;
+  border: 1px solid #e0e0e0;
+  box-sizing: border-box;
+  overflow: auto;
+  background-color: var(--rdg-background-color);
+  color: #000;
+  font-size: 14px;
+}
+
+.rdg *,
+.rdg *::before,
+.rdg *::after {
+  box-sizing: inherit;
+}
+
+.rdg-viewport-dragging .rdg-row {
+  cursor: move;
+}
+
+.rdg-row {
+  display: contents;
+  line-height: var(--rdg-row-height);
+  background-color: var(--rdg-background-color);
+}
+
+.rdg-row:hover {
+  background-color: #f5f5f5;
+}
+
+.rdg-row[aria-selected=true] {
+  background-color: var(--rdg-selection-color);
+}
+
+.rdg-header-row {
+  display: contents;
+  line-height: var(--rdg-header-row-height);
+  background-color: var(--rdg-header-background-color);
+  font-weight: var(--rdg-header-font-weight);
+}
+
+.rdg-cell,
+.rdg-header-cell {
+  position: relative;
+  padding: 0 var(--rdg-cell-padding);
+  border-inline-end: 1px solid #e0e0e0;
+  border-block-end: 1px solid #e0e0e0;
+  grid-row-start: var(--rdg-grid-row-start);
+  background-color: inherit;
+  overflow: hidden;
+  overflow: clip;
+  text-overflow: ellipsis;
+  outline: none;
+}
+
+.rdg-cell {
+  white-space: nowrap;
+}
+
+.rdg-cell[aria-selected=true] {
+  outline: 2px solid var(--rdg-selection-color);
+  outline-offset: -2px;
+}
+
+.rdg-cell-frozen {
+  position: sticky;
+}
+
+.rdg-cell-frozen-last {
+  box-shadow: calc(2px / var(--rdg-sign)) 0 5px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* Editing */
+.rdg-text-editor {
+  appearance: none;
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: 0 var(--rdg-cell-padding);
+  border: 0;
+  vertical-align: top;
+  color: var(--rdg-color);
+  background-color: var(--rdg-background-color);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: var(--rdg-row-height);
+  outline: none;
+}
+
+.rdg-text-editor::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+/* Checkbox */
+.rdg-checkbox-label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  margin-inline-end: 1px;
+}
+
+.rdg-checkbox-label > input[type=checkbox] {
+  cursor: pointer;
+}
+
+.rdg-checkbox-label:focus {
+  outline: 2px solid var(--rdg-selection-color);
+  outline-offset: -2px;
+}
+
+/* Grouping */
+.rdg-group-cell-content {
+  outline: none;
+}
+
+.rdg-group-cell-content > span:first-child {
+  margin-inline-start: calc(var(--rdg-sign) * 10px);
+}
+
+/* Sort */
+.rdg-header-sort-cell {
+  cursor: pointer;
+  display: flex;
+}
+
+.rdg-header-sort-name {
+  flex-grow: 1;
+  overflow: hidden;
+  overflow: clip;
+  text-overflow: ellipsis;
+}
+
+/* Resizing */
+.rdg-header-cell-resizable {
+  padding-inline-end: 0;
+}
+
+.rdg-header-cell-resizer {
+  cursor: col-resize;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: 10px;
+}
+
+.rdg-header-cell-resizer:hover,
+.rdg-header-cell-dragging .rdg-header-cell-resizer {
+  background-color: var(--rdg-selection-color);
+}
+
+/* Draggable */
+.rdg-header-cell-draggable {
+  cursor: move;
+}
+
+.rdg-header-cell-drag-handle {
+  cursor: move;
+}
+
+/* Summary */
+.rdg-summary-row {
+  display: contents;
+  line-height: var(--rdg-summary-row-height);
+  background-color: var(--rdg-background-color);
+}
+
+.rdg-summary-row > .rdg-cell {
+  font-weight: var(--rdg-summary-font-weight, 600);
+}
+
+/* Focus */
+.rdg:focus-visible {
+  outline: 2px solid var(--rdg-selection-color);
+  outline-offset: -2px;
+}
+
+/* Selection */
+.rdg-row[aria-selected=true] {
+  background-color: rgba(102, 175, 233, 0.1);
+}
+
+.rdg-row[aria-selected=true]:hover {
+  background-color: rgba(102, 175, 233, 0.2);
+}
