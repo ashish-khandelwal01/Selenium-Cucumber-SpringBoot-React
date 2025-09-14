@@ -53,7 +53,7 @@ jobs:
           echo "Backend did not start within 120 seconds."
           exit 1
 
-      # Generate JWT token and trigger /run-tests
+      # Generate JWT token and trigger /api/tests/run
       - name: Trigger automation with JWT
         id: run_tests
         run: |
@@ -62,17 +62,27 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"username":"${{ secrets.TEST_USER }}","password":"${{ secrets.TEST_PASS }}"}' \
             | jq -r '.token')
-          echo "Generated Token:" $TOKEN
+          echo "Generated Token: $TOKEN"
 
-          echo "Calling /run API with JWT..."
-          RESPONSE=$(curl -s -X POST http://localhost:8080/api/tests/run \
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "❌ Failed to generate JWT token."
+            exit 1
+          fi
+
+          echo "Calling /api/tests/run API with JWT..."
+          RESPONSE=$(curl -s -X POST "http://localhost:8080/api/tests/run?tags=@smoke_api" \
             -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-          -d '{"tags":"@smoke_api"}')
+            -H "Content-Type: application/json")
           
           echo "Response: $RESPONSE"
           RUN_ID=$(echo "$RESPONSE" | jq -r '.runId')
-          echo "Run ID is $RUN_ID"
+          
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" == "null" ]; then
+            echo "❌ Failed to get runId from response."
+            exit 1
+          fi
+          
+          echo "✅ Run ID is $RUN_ID"
           echo "run_id=$RUN_ID" >> $GITHUB_ENV
 
       # Pull test report using runId
