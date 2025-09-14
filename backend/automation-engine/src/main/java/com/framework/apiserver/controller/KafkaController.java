@@ -19,7 +19,8 @@ public class KafkaController {
 
     @GetMapping("/send")
     public String sendMessage() {
-        kafkaProducer.sendHello();
-        return "Message sent!";
+        String runId = "run-" + System.currentTimeMillis();
+        kafkaProducer.sendHello(runId);
+        return "Event sent: " + runId;
     }
 }
