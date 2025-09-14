@@ -1,9 +1,7 @@
 package com.framework.apiserver.service;
 
-import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.dto.dashboard.ReportStatsDto;
 import org.springframework.http.ResponseEntity;
-
-import java.util.List;
 
 /**
  * Service interface for managing report-related operations.
@@ -23,7 +21,7 @@ public interface ReportService {
      *
      * @return A list of TestRunInfoEntity objects representing all reports.
      */
-    List<TestRunInfoEntity> listAllReports();
+    ReportStatsDto listAllReports();
 
     /**
      * Retrieves the Spark report for a specific test run.

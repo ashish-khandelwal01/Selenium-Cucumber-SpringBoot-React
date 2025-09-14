@@ -52,7 +52,8 @@ const Dashboard = () => {
   } = useTestResults();
 
   const {
-    runs: runsReportList,
+    aveExecutionTime: aveExecutionTime,
+    failedToday: failedTodayTotal,
     loading: loadingReportList,
     error: errorReportList,
     fetchRunList,
@@ -71,25 +72,6 @@ const Dashboard = () => {
 
   const COLORS = ['#3554a5', '#ef4444'];
 
-  const averageExecutionTime = useMemo(() => {
-    if (!runsReportList || runsReportList.length === 0) return 0;
-    const totalDuration = runsReportList.reduce(
-      (acc, run) => acc + run.durationSeconds,
-      0
-    );
-    return (totalDuration / runsReportList.length).toFixed(2);
-  }, [runsReportList]);
-
-  const failedToday = useMemo(() => {
-    if (!runsReportList || runsReportList.length === 0) return 0;
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return runsReportList.filter((run) => {
-      const runDate = new Date(run.startTime);
-      return runDate >= todayStart && run.status.includes('Failures');
-    }).length;
-  }, [runsReportList]);
-
   const [selectedRun, setSelectedRun] = useState(null);
 
   return (
@@ -106,7 +88,7 @@ const Dashboard = () => {
           <CardContent className="p-4">
             Failures Today
             <br />
-            <span className="text-2xl font-bold">{failedToday}</span>
+            <span className="text-2xl font-bold">{failedTodayTotal}</span>
           </CardContent>
         </Card>
         <Card
@@ -148,7 +130,7 @@ const Dashboard = () => {
             Average Execution Time
             <br />
             <span className="text-2xl font-bold">
-              {formatDuration(Number(averageExecutionTime))}
+              {formatDuration(Number(aveExecutionTime))}
             </span>
           </CardContent>
         </Card>
