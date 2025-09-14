@@ -85,17 +85,10 @@ jobs:
           echo "✅ Run ID is $RUN_ID"
           echo "run_id=$RUN_ID" >> $GITHUB_ENV
 
-      # Pull test report using runId
-      - name: Pull test report
-        run: |
-          echo "Downloading report for run ID: ${{ env.run_id }}"
-          curl -o target/cucumber-reports/report-${{ env.run_id }}.json \
-            http://localhost:8080/api/reports/${{ env.run_id }}/download
-
       # Archive test logs/reports
       - name: Archive test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: automation-logs
-          path: target/cucumber-reports/**/*
+          path: backend/automation-engine/reports/${{ env.run_id }}.zip
