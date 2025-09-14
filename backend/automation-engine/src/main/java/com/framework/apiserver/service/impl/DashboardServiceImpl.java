@@ -1,6 +1,6 @@
 package com.framework.apiserver.service.impl;
 
-import com.framework.apiserver.dto.dashboard.DailyTestSummary;
+import com.framework.apiserver.dto.dashboard.*;
 import com.framework.apiserver.entity.TestRunInfoEntity;
 import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.DashboardService;
@@ -17,9 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.framework.apiserver.dto.dashboard.WeeklySummaryResponse;
-import com.framework.apiserver.dto.dashboard.PassFailPieResponse;
-import com.framework.apiserver.dto.dashboard.TopFailure;
 
 /**
  * Implementation of the DashboardService interface.
@@ -91,10 +88,10 @@ public class DashboardServiceImpl implements DashboardService {
      * @return A PassFailPieResponse object containing the total passed and failed test counts.
      */
     public PassFailPieResponse getPassFailStats() {
-        List<TestRunInfoEntity> allRuns = repository.findAll();
+        PassFailProjection result = repository.getPassFailStats();
 
-        int passed = allRuns.stream().mapToInt(TestRunInfoEntity::getPassed).sum();
-        int failed = allRuns.stream().mapToInt(TestRunInfoEntity::getFailed).sum();
+        int passed = result.getPassed() != null ? result.getPassed().intValue() : 0;
+        int failed = result.getFailed() != null ? result.getFailed().intValue() : 0;
 
         return new PassFailPieResponse(passed, failed);
     }
@@ -168,9 +165,7 @@ public class DashboardServiceImpl implements DashboardService {
      * @return A list of the latest test runs.
      */
     public List<TestRunInfoEntity> getLatestRunsInfo(int count) {
-        return repository.findAll(Sort.by(Sort.Direction.DESC, "startTime")).stream()
-                .limit(count)
-                .toList();
+        return repository.findTop5ByOrderByStartTimeDesc();
     }
 
     /**
@@ -179,8 +174,8 @@ public class DashboardServiceImpl implements DashboardService {
      * @return A list of all test runs.
      */
     @Override
-    public List<TestRunInfoEntity> getAllRunsInfo() {
-        return repository.findAll(Sort.by(Sort.Direction.DESC, "startTime"));
+    public long getAllRunsInfo() {
+        return repository.count();
     }
 
     @Override

@@ -1,8 +1,6 @@
 package com.framework.apiserver.service.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.framework.apiserver.dto.ReportMetaData;
-import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.dto.dashboard.ReportStatsDto;
 import com.framework.apiserver.repository.TestRunInfoRepository;
 import com.framework.apiserver.service.ReportService;
 import org.modelmapper.ModelMapper;
@@ -11,13 +9,11 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.framework.apiserver.service.TestRunInfoService;
 
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * Service class for managing test reports.
@@ -76,16 +72,23 @@ public class ReportServiceImpl implements ReportService {
     }
 
     /**
-     * Lists metadata for all available test reports.
+     * Report stats Dto returns average execution time and failure count today.
      *
-     * <p>This method scans the reports directory for subdirectories representing test runs.
-     * For each subdirectory, it attempts to read the `run-info.json` file and parse it into
-     * a `ReportMetaData` object. All successfully parsed metadata objects are returned as a list.</p>
+     * <p>This method scans the reports directory and returns the
+     * average time for execution and total count failed today.</p>
      *
-     * @return A list of `ReportMetaData` objects representing the available test reports.
+     * @return A Report Stats Dto which returns the average and fail count today.
      */
-    public List<TestRunInfoEntity> listAllReports() {
-        return testRunInfoRepository.findAll();
+    public ReportStatsDto listAllReports() {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        Double avg = testRunInfoRepository.findAverageDurationSeconds();
+        long failed = testRunInfoRepository.countFailuresToday("Failures", todayStart);
+
+        return new ReportStatsDto(avg != null ? roundToTwoDecimals(avg) : 0.0, failed);
+    }
+
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     /**

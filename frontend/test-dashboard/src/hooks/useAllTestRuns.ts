@@ -9,7 +9,7 @@ export function useAllTestRuns() {
     setLoading(true);
     try {
       const response = await getAllRuns();
-      setTotal((response.data || []).length);
+      setTotal((response.data || 0));
     } catch (error) {
       setTotal(0);
     } finally {

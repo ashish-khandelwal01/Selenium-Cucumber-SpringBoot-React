@@ -9,12 +9,9 @@ import com.framework.apiserver.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,15 +41,15 @@ public class DashboardController {
      * @return A list of all test runs.
      */
     @Operation(
-            summary = "Get all test runs",
-            description = "Retrieves all test runs sorted by start time in descending order.",
+            summary = "Get test run count",
+            description = "Retrieves the total count of all test runs.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "List of all test runs retrieved successfully"),
                     @ApiResponse(responseCode = "500", description = "Internal server error")
             }
     )
     @GetMapping("/runs")
-    public List<TestRunInfoEntity> getAllRuns() {
+    public long getAllRuns() {
         return dashboardService.getAllRunsInfo();
     }
 

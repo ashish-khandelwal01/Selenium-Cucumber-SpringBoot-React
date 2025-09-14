@@ -14,7 +14,7 @@ export const usePassFailPie = () => {
     try {
       const res = await getPassFailPie();
       const raw = res.data; // { passed: number; failed: number }
-
+      console.log('Pass/Fail Data:', raw);
       const total = raw.passed + raw.failed;
       setTotal(total);
       const pieData: PieChartData[] = total > 0 ? [

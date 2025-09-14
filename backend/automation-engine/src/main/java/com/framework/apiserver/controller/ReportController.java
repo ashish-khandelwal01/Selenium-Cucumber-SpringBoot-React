@@ -1,14 +1,12 @@
 package com.framework.apiserver.controller;
 
-import com.framework.apiserver.dto.ReportMetaData;
-import com.framework.apiserver.entity.TestRunInfoEntity;
+import com.framework.apiserver.dto.dashboard.ReportStatsDto;
 import com.framework.apiserver.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 /**
  * ReportController handles API endpoints related to test report management.
@@ -56,8 +54,8 @@ public class ReportController {
      */
     @Operation(summary = "List all report metadata")
     @GetMapping("/list")
-    public ResponseEntity<List<TestRunInfoEntity>> listReports() {
-        return ResponseEntity.ok(reportService.listAllReports());
+    public ReportStatsDto listReports() {
+        return reportService.listAllReports();
     }
 
     /**

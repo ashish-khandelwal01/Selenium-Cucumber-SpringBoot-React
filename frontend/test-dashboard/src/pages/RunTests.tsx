@@ -156,7 +156,7 @@ const {
 
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold text-gray-100 whitespace-nowrap">
-                    Excel Sheet Editor
+                    Data Sheet Editor
                   </h2>
                   <select
                     value={selectedSheet ?? ""}

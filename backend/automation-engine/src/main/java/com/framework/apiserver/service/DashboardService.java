@@ -65,7 +65,7 @@ public interface DashboardService {
      *
      * @return A list of TestRunInfoEntity objects representing all test runs.
      */
-    List<TestRunInfoEntity> getAllRunsInfo();
+    long getAllRunsInfo();
 
     /**
      * Retrieves a paginated list of all test runs.
