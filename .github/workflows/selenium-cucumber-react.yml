@@ -24,11 +24,15 @@ jobs:
 
       # Build Spring Boot backend
       - name: Build Spring Boot
-        run: mvn clean install -DskipTests
+        run: |
+          cd backend/automation-engine
+          mvn clean install -DskipTests
 
       # Start Spring Boot backend in background with JWT secret
       - name: Start Spring Boot backend
-        run: mvn spring-boot:run &
+        run: |
+          cd backend/automation-engine
+          mvn spring-boot:run &
         env:
           DB_URL: ${{ secrets.DB_URL }}
           DB_USER: ${{ secrets.DB_USER }}
