@@ -65,7 +65,7 @@ jobs:
           echo "Generated Token:" $TOKEN
 
           echo "Calling /run API with JWT..."
-          RESPONSE=$(curl -s -X POST http://localhost:8080/run \
+          RESPONSE=$(curl -s -X POST http://localhost:8080/api/tests/run \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
           -d '{"tags":"@smoke_api"}')
