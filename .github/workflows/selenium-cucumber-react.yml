@@ -13,11 +13,11 @@ jobs:
 
     steps:
       # Checkout code
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Set up JDK for Spring Boot
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -80,7 +80,7 @@ jobs:
       # Archive test logs/reports
       - name: Archive test logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: automation-logs
           path: target/cucumber-reports/**/*
