@@ -62,9 +62,10 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"username":"${{ secrets.TEST_USER }}","password":"${{ secrets.TEST_PASS }}"}' \
             | jq -r '.token')
+          echo "Generated Token: $TOKEN
 
-          echo "Calling /run-tests API with JWT..."
-          RESPONSE=$(curl -s -X POST http://localhost:8080/run-tests \
+          echo "Calling /run API with JWT..."
+          RESPONSE=$(curl -s -X POST http://localhost:8080/run \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
           -d '{"tags":"@smoke_api"}')
