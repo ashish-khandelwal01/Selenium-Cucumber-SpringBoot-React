@@ -1,10 +1,7 @@
 package com.framework.apiserver.service.impl;
 
 import com.framework.apiserver.dto.TestExecutionResponse;
-import com.framework.apiserver.service.BrowserContextManager;
-import com.framework.apiserver.service.JobTrackingService;
-import com.framework.apiserver.service.TestExecutionService;
-import com.framework.apiserver.service.TestRunInfoService;
+import com.framework.apiserver.service.*;
 import com.framework.apiserver.utilities.AsyncJobManager;
 import com.framework.apiserver.utilities.CommonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +44,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
 
     @Autowired
     private TestRunInfoService testRunInfoService;
+
+    @Autowired
+    private ExecutionOrchestratorService executionOrchestratorService;
 
     /**
      * Executes Cucumber tests filtered by the specified tag.
@@ -142,4 +142,9 @@ public class TestExecutionServiceImpl implements TestExecutionService {
         asyncJobManager.registerJobThread(jobId, jobThread);
         jobThread.start();
     }
+
+    public String runTestsAsyncV2(String tag, String createdBy) {
+        return executionOrchestratorService.executeTestsAsync(tag, createdBy);
+    }
+
 }

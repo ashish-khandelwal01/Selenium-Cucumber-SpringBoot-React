@@ -44,6 +44,9 @@ public class TestRerunServiceImpl implements TestRerunService {
     private JobTrackingService jobTrackingService;
 
     @Autowired
+    private ExecutionOrchestratorService executionOrchestratorService;
+
+    @Autowired
     private CommonUtils commonUtils;
 
     private static final String REPORTS_BASE_PATH = "reports";
@@ -278,5 +281,17 @@ public class TestRerunServiceImpl implements TestRerunService {
         asyncJobManager.registerJobThread(jobId, jobThread);
         jobThread.start();
     }
+
+    public String rerunTestsAsyncV2(String runId, String createdBy) {
+        return executionOrchestratorService.executeRerunAsync(runId, createdBy, false);
+    }
+
+    /**
+     * New method that uses the orchestrator for async failed rerun execution
+     */
+    public String rerunFailedTestsAsyncV2(String runId, String createdBy) {
+        return executionOrchestratorService.executeRerunAsync(runId, createdBy, true);
+    }
+
 
 }
