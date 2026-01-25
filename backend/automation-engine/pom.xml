@@ -9,12 +9,12 @@
         <relativePath/>
     </parent>
 
-	<groupId>com.framework</groupId>
+	<groupId>org.automation.platform</groupId>
 	<artifactId>automation-engine</artifactId>
 	<version>1.0.0</version>
 	<packaging>jar</packaging>
 
-	<name>Cucumber</name>
+	<name>CukeForge-React-Maven</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
